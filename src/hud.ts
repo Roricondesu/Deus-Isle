@@ -93,7 +93,7 @@ export function refreshHUD(): void {
 
   const eb = $('btn-expand') as HTMLButtonElement;
   if (S.expandMode) {
-    eb.innerHTML = icon(IC.target) + ' 取消选择<small style="display:block;font-size:9px;opacity:.75">点击海面圆形区域 / Esc</small>';
+    eb.innerHTML = icon(IC.target) + ' 取消选择<small style="display:block;font-size:9px;opacity:.75">点击海面任意位置 / Esc</small>';
     eb.disabled = false;
     eb.classList.add('sel');
   } else if (S.expand >= 3) {

@@ -69,12 +69,15 @@ export interface Patch {
 export let PATCHES: Patch[] = [];
 
 export function initPatches(): void {
-  PATCHES = [0, 1, 2].map((i) => ({
-    ang: SEED * 0.7 + i * 2.2 + ((SEED * (i + 3)) % 1) * 0.9,
-    dist: 13.2,
-    r: 4.6 + i * 1.1,
-    owned: false,
-  }));
+  PATCHES = [];
+}
+
+export function addPatch(x: number, z: number, r: number = 5): Patch {
+  const ang = Math.atan2(z, x);
+  const dist = Math.hypot(x, z);
+  const p: Patch = { ang, dist, r, owned: true };
+  PATCHES.push(p);
+  return p;
 }
 
 export function reseed(newSeed?: number): void {

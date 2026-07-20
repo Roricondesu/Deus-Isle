@@ -10,6 +10,8 @@ import {
   costText,
   pay,
   PATCHES,
+  addPatch,
+  landH,
   type CellEntry,
 } from './state';
 import {
@@ -48,6 +50,7 @@ import {
 import { placeBuilding, highlight } from './interaction';
 import { iconify, icon, IC } from './icon';
 import { saveGame } from './save';
+import { rebuildRoads } from './roads';
 
 /* ================= 随机事件（直接修改 S） ================= */
 interface EventDef {
@@ -405,18 +408,23 @@ function upgradeBuildingMesh(b: CellEntry, key: string, newEra: number): void {
   tw(0.6, (k) => b.g.scale.setScalar(Math.max(0.01, k)), easeOutBack);
   b.era = newEra;
   sfx.pop();
+  rebuildRoads();
 }
 
 function morphBuildings(): void {
   let i = 0;
+  let count = 0;
   S.cells.forEach((b, key) => {
     if (b.t === 'wonder') {
       b.relic = true;
       return;
     }
+    count++;
     setTimeout(() => upgradeBuildingMesh(b, key, S.era), i * 90);
     i++;
   });
+  // 所有升级动画结束后再重建一次道路（确保时代风格更新）
+  setTimeout(() => rebuildRoads(), count * 90 + 700);
 }
 
 /* ================= 居民自动升级建筑 ================= */
@@ -491,7 +499,11 @@ export function updateLaunch(dt: number): void {
   }
 }
 
-/* ================= 填海扩岛（手动选择位置） ================= */
+/* ================= 填海扩岛（手动选择任意位置） ================= */
+const PATCH_RADIUS = 5;
+const PATCH_MIN_DIST = 14;  // 离岛心最小距离（避免压主岛）
+const PATCH_MAX_DIST = 28;  // 离岛心最大距离
+
 export function enterExpandMode(): void {
   if (S.expand >= 3 || S.transitioning || S.over) return;
   if (S.expandMode) {
@@ -506,7 +518,7 @@ export function enterExpandMode(): void {
   }
   S.expandMode = true;
   S.sel = null;
-  toast('点击海面上闪烁的圆形区域选择填海位置', IC.target);
+  toast('点击海面任意位置填海造陆', IC.target);
   refreshHUD();
   renderDock();
 }
@@ -518,14 +530,28 @@ export function cancelExpandMode(): void {
   renderDock();
 }
 
-export function confirmExpand(patchIdx: number): void {
+export function isValidExpandPos(x: number, z: number): boolean {
+  const d = Math.hypot(x, z);
+  if (d < PATCH_MIN_DIST || d > PATCH_MAX_DIST) return false;
+  // 必须在水面上（landH <= 0）
+  if (landH(x, z) > 0) return false;
+  // 不能与已有 patch 重叠
+  for (const p of PATCHES) {
+    const px = Math.cos(p.ang) * p.dist;
+    const pz = Math.sin(p.ang) * p.dist;
+    if (Math.hypot(px - x, pz - z) < p.r + PATCH_RADIUS - 1) return false;
+  }
+  return true;
+}
+
+export function confirmExpandAt(x: number, z: number): void {
   if (!S.expandMode || S.expand >= 3) {
     cancelExpandMode();
     return;
   }
-  const p = PATCHES[patchIdx];
-  if (!p || p.owned) {
+  if (!isValidExpandPos(x, z)) {
     sfx.error();
+    toast('位置不合适：需在水面上，距岛心 ' + PATCH_MIN_DIST + '–' + PATCH_MAX_DIST + ' 之间', '⚠️');
     return;
   }
   const c = EXPAND_COST[S.expand];
@@ -537,15 +563,13 @@ export function confirmExpand(patchIdx: number): void {
   }
   S.wood -= c[0];
   S.gold -= c[1];
-  p.owned = true;
+  addPatch(x, z, PATCH_RADIUS);
   S.expand++;
   S.expandMode = false;
   buildIsland();
   sfx.build();
   addShake(0.3);
-  const px = Math.cos(p.ang) * p.dist;
-  const pz = Math.sin(p.ang) * p.dist;
-  burst(V3(px, 1, pz), 0x8ad0ff, 60, 14, 1.4, -2, 6);
+  burst(V3(x, 1, z), 0x8ad0ff, 60, 14, 1.4, -2, 6);
   toast('填海造陆！岛屿向该方向扩张', '🏝️');
   refreshHUD();
   saveGame();

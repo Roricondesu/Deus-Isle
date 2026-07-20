@@ -31,6 +31,7 @@ import { refreshHUD, renderDock, updateGodDock, toast, updateEraBadge } from './
 import { saveGame, loadGame, clearSave } from './save';
 import { S } from './state';
 import { setupAudioToggle, unlockAudio, sfx } from './audio';
+import { rebuildRoads } from './roads';
 
 /* ================= 主循环 ================= */
 const clock = new THREE.Clock();
@@ -175,6 +176,7 @@ function init(): void {
   tweens.length = 0;
   renderDock();
   refreshHUD();
+  rebuildRoads();
   loop();
 }
 
