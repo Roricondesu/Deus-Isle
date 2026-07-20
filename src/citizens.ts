@@ -2,8 +2,13 @@ import * as THREE from 'three';
 import { B, C, CO, SP, G, _m } from './materials';
 import { CIT_COL } from './constants';
 import { rand, pick, lerp } from './utils';
-import { S, R, landH } from './state';
+import { S, landH } from './state';
 import { islandGroup } from './environment';
+
+/* 桥面高度：跨水时市民走这个高度，视觉上像在桥上行走 */
+const BRIDGE_Y = 0.5;
+/* 最远采样半径：覆盖到最远的 patch（PATCH_MAX_DIST=32） */
+const MAX_WALK_R = 30;
 
 /* ================= 市民 ================= */
 export interface Citizen {
@@ -52,9 +57,10 @@ export function makeCitizenMesh(e: number): THREE.Group {
 
 export function spawnCitizen(x?: number, z?: number): Citizen {
   if (x === undefined) {
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < 12; i++) {
       const a = rand(Math.PI * 2);
-      const d = rand(2, R() * 0.8);
+      // 扩大采样范围：覆盖主岛 + 已购买 patches
+      const d = rand(2, MAX_WALK_R);
       const tx = Math.cos(a) * d;
       const tz = Math.sin(a) * d;
       if (landH(tx, tz) > 0.55) {
@@ -67,7 +73,7 @@ export function spawnCitizen(x?: number, z?: number): Citizen {
     z = z ?? 0;
   }
   const g = makeCitizenMesh(S.era);
-  g.position.set(x, landH(x, z), z);
+  g.position.set(x, Math.max(landH(x, z), BRIDGE_Y), z);
   islandGroup.add(g);
   const c: Citizen = {
     g,
@@ -82,10 +88,23 @@ export function spawnCitizen(x?: number, z?: number): Citizen {
   return c;
 }
 
+/** 选下一个目标：
+ *  - 60% 概率：以某栋建筑（含 patch 上的）为目标
+ *  - 40% 概率：在主岛 + patches 范围内随机采样
+ *  跨水目标也允许（市民会沿桥走过去） */
 export function newTarget(c: Citizen): void {
-  for (let i = 0; i < 8; i++) {
+  // 60% 概率挑建筑作为目标
+  if (S.cells.size > 0 && Math.random() < 0.6) {
+    const arr = Array.from(S.cells.values());
+    const b = pick(arr);
+    c.tx = b.g.position.x + rand(-0.6, 0.6);
+    c.tz = b.g.position.z + rand(-0.6, 0.6);
+    return;
+  }
+  // 40% 概率在大范围内随机采样
+  for (let i = 0; i < 10; i++) {
     const a = rand(Math.PI * 2);
-    const d = rand(2, R() * 0.85);
+    const d = rand(2, MAX_WALK_R);
     const x = Math.cos(a) * d;
     const z = Math.sin(a) * d;
     if (landH(x, z) > 0.55) {
@@ -94,6 +113,7 @@ export function newTarget(c: Citizen): void {
       return;
     }
   }
+  // 都失败 → 回主岛中心
   c.tx = 0;
   c.tz = 0;
 }
@@ -115,18 +135,24 @@ export function updateCitizens(dt: number, t: number): void {
         c.state = 'idle';
         c.t = rand(1.5, 4);
       } else {
-        const v = c.sp * dt;
+        // 跨水时减速（走桥要慢一点）
+        const onWater = landH(g.position.x, g.position.z) < 0.05;
+        const speedScale = onWater ? 0.7 : 1;
+        const v = c.sp * speedScale * dt;
         g.position.x += (dx / d) * v;
         g.position.z += (dz / d) * v;
         g.rotation.y = Math.atan2(dx, dz);
-        g.position.y = landH(g.position.x, g.position.z) + Math.abs(Math.sin(t * 9 + c.ph)) * 0.07;
+        // y 高度：陆地走陆地，水面走桥面高度（视觉上沿桥行走）
+        const groundY = landH(g.position.x, g.position.z);
+        g.position.y = Math.max(groundY, BRIDGE_Y) + Math.abs(Math.sin(t * 9 + c.ph)) * 0.07;
         const [aL, aR] = g.userData.arms as THREE.Mesh[];
         aL.rotation.x = Math.sin(t * 9 + c.ph) * 0.6;
         aR.rotation.x = -Math.sin(t * 9 + c.ph) * 0.6;
       }
     } else if (c.state === 'idle') {
       c.t -= dt;
-      g.position.y = landH(g.position.x, g.position.z);
+      const groundY = landH(g.position.x, g.position.z);
+      g.position.y = Math.max(groundY, BRIDGE_Y);
       const [aL, aR] = g.userData.arms as THREE.Mesh[];
       aL.rotation.x *= 0.9;
       aR.rotation.x *= 0.9;
