@@ -161,6 +161,7 @@ function ringStrip(
   yBot: number,
   mat: THREE.Material,
   shadow?: boolean,
+  cap?: boolean,
 ): THREE.Mesh {
   const N = 64;
   const verts: number[] = [];
@@ -173,6 +174,18 @@ function ringStrip(
   for (let i = 0; i < N; i++) {
     const a = i * 2;
     idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2);
+  }
+  // 底面封口（避免从下方看到裙摆内部空腔）
+  if (cap) {
+    const base = verts.length / 3;
+    for (let i = 0; i <= N; i++) {
+      const a = (i / N) * Math.PI * 2;
+      verts.push(Math.cos(a) * rBot(a), yBot, Math.sin(a) * rBot(a));
+    }
+    for (let i = 0; i < N; i++) {
+      // 顺时针缠绕使法线朝下
+      idx.push(base + i, base + i + 1, base);
+    }
   }
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
@@ -282,8 +295,9 @@ export function buildIsland(): void {
     (a) => outlineR(a) + 0.2,
     (a) => outlineR(a) * 0.55,
     -0.1,
-    -5.5,
+    -4.2,
     rockMat,
+    true,
     true,
   );
   islandGroup.add(sk);
@@ -311,8 +325,9 @@ export function buildIsland(): void {
       (a) => patchR(p, a) + 0.2,
       (a) => patchR(p, a) * 0.5,
       -0.1,
-      -4.5,
+      -3.6,
       rockMat,
+      true,
       true,
     );
     sk2.position.set(px, 0, pz);
