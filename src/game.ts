@@ -8,8 +8,20 @@ import {
   cellY,
   canAfford,
   costText,
+  pay,
+  PATCHES,
+  type CellEntry,
 } from './state';
-import { GODS, PRAYERS, ERAS, EXPAND_COST, eraReq } from './constants';
+import {
+  GODS,
+  PRAYERS,
+  ERAS,
+  EXPAND_COST,
+  eraReq,
+  CATALOG,
+  CELL,
+  type BuildingDef,
+} from './constants';
 import { V3, rand, randi, pick, clamp, lerp, tw, easeIn, easeOutBack } from './utils';
 import {
   scene,
@@ -34,7 +46,7 @@ import {
   showVictory,
 } from './hud';
 import { placeBuilding, highlight } from './interaction';
-import { iconify } from './icon';
+import { iconify, icon, IC } from './icon';
 import { saveGame } from './save';
 
 /* ================= 随机事件（直接修改 S） ================= */
@@ -375,35 +387,73 @@ export function eraUp(): void {
   }, 5800);
 }
 
+function upgradeBuildingMesh(b: CellEntry, key: string, newEra: number): void {
+  const [x, z] = key.split(',').map(Number);
+  burst(b.g.position.clone().add(V3(0, 1, 0)), 0xffffff, 18, 4, 0.8, -2, 4);
+  islandGroup.remove(b.g);
+  b.g = makeBuilding(b.t, newEra);
+  b.g.position.set(x * CELL, cellY(x, z) - 0.06, z * CELL);
+  b.g.rotation.y = randi(0, 3) * Math.PI / 2;
+  const base = new THREE.Mesh(
+    new THREE.CylinderGeometry(1.02, 1.14, 0.18, 10),
+    new THREE.MeshToonMaterial({ color: 0xb8b0a0 }),
+  );
+  base.position.y = -0.02;
+  b.g.add(base);
+  b.g.scale.setScalar(0.01);
+  islandGroup.add(b.g);
+  tw(0.6, (k) => b.g.scale.setScalar(Math.max(0.01, k)), easeOutBack);
+  b.era = newEra;
+  sfx.pop();
+}
+
 function morphBuildings(): void {
   let i = 0;
-  const CELL = 2.3;
   S.cells.forEach((b, key) => {
     if (b.t === 'wonder') {
       b.relic = true;
       return;
     }
-    const [x, z] = key.split(',').map(Number);
-    setTimeout(() => {
-      burst(b.g.position.clone().add(V3(0, 1, 0)), 0xffffff, 18, 4, 0.8, -2, 4);
-      islandGroup.remove(b.g);
-      b.g = makeBuilding(b.t, S.era);
-      b.g.position.set(x * CELL, cellY(x, z) - 0.06, z * CELL);
-      b.g.rotation.y = randi(0, 3) * Math.PI / 2;
-      const base = new THREE.Mesh(
-        new THREE.CylinderGeometry(1.02, 1.14, 0.18, 10),
-        new THREE.MeshToonMaterial({ color: 0xb8b0a0 }),
-      );
-      base.position.y = -0.02;
-      b.g.add(base);
-      b.g.scale.setScalar(0.01);
-      islandGroup.add(b.g);
-      tw(0.6, (k) => b.g.scale.setScalar(Math.max(0.01, k)), easeOutBack);
-      b.era = S.era;
-      sfx.pop();
-    }, i * 90);
+    setTimeout(() => upgradeBuildingMesh(b, key, S.era), i * 90);
     i++;
   });
+}
+
+/* ================= 居民自动升级建筑 ================= */
+let upgradeAcc = 0;
+const UPGRADE_INTERVAL = 6; // 每 6 秒尝试一次自动升级
+const UPGRADE_RATIO = 0.5;  // 升级消耗 = 该建筑原始 cost 的 50%
+
+export function autoUpgradeTick(dt: number): void {
+  if (S.era < 1 || S.transitioning || S.over) return;
+  upgradeAcc += dt;
+  if (upgradeAcc < UPGRADE_INTERVAL) return;
+  upgradeAcc = 0;
+  // 找出所有「年代落后于当前时代」的可升级建筑
+  const candidates: { key: string; b: CellEntry; def: BuildingDef }[] = [];
+  S.cells.forEach((b, key) => {
+    if (b.relic || b.t === 'wonder') return;
+    if (b.era >= S.era) return;
+    const def = CATALOG.find((d) => d.t === b.t);
+    if (def) candidates.push({ key, b, def });
+  });
+  if (!candidates.length) return;
+  const { key, b, def } = pick(candidates);
+  const cost: [number, number, number] = [
+    Math.ceil(def.cost[0] * UPGRADE_RATIO),
+    Math.ceil(def.cost[1] * UPGRADE_RATIO),
+    Math.ceil(def.cost[2] * UPGRADE_RATIO),
+  ];
+  // 资源不够就等下一轮
+  if (!canAfford(cost)) return;
+  pay(cost);
+  upgradeBuildingMesh(b, key, S.era);
+  floatText(
+    b.g.position,
+    icon(IC.arrowUp) + ' 升级→' + ERAS[S.era].name,
+    '#9fd8ff',
+  );
+  refreshHUD();
 }
 
 /* ================= 终局：方舟发射 ================= */
@@ -441,32 +491,62 @@ export function updateLaunch(dt: number): void {
   }
 }
 
-/* ================= 填海扩岛 ================= */
-export function tryExpand(): void {
-  if (S.expand >= 3) return;
+/* ================= 填海扩岛（手动选择位置） ================= */
+export function enterExpandMode(): void {
+  if (S.expand >= 3 || S.transitioning || S.over) return;
+  if (S.expandMode) {
+    cancelExpandMode();
+    return;
+  }
   const c = EXPAND_COST[S.expand];
   if (!canAfford([c[0], c[1], 0])) {
     sfx.error();
     toast('资源不足！需要 ' + costText([c[0], c[1], 0]), '⚠️');
     return;
   }
+  S.expandMode = true;
+  S.sel = null;
+  toast('点击海面上闪烁的圆形区域选择填海位置', IC.target);
+  refreshHUD();
+  renderDock();
+}
+
+export function cancelExpandMode(): void {
+  if (!S.expandMode) return;
+  S.expandMode = false;
+  refreshHUD();
+  renderDock();
+}
+
+export function confirmExpand(patchIdx: number): void {
+  if (!S.expandMode || S.expand >= 3) {
+    cancelExpandMode();
+    return;
+  }
+  const p = PATCHES[patchIdx];
+  if (!p || p.owned) {
+    sfx.error();
+    return;
+  }
+  const c = EXPAND_COST[S.expand];
+  if (!canAfford([c[0], c[1], 0])) {
+    sfx.error();
+    toast('资源不足！需要 ' + costText([c[0], c[1], 0]), '⚠️');
+    cancelExpandMode();
+    return;
+  }
   S.wood -= c[0];
   S.gold -= c[1];
+  p.owned = true;
   S.expand++;
+  S.expandMode = false;
   buildIsland();
   sfx.build();
   addShake(0.3);
-  burst(V3(0, 1, 0), 0x8ad0ff, 60, 14, 1.4, -2, 6);
-  toast('填海造陆！岛屿扩张了', '🏝️');
+  const px = Math.cos(p.ang) * p.dist;
+  const pz = Math.sin(p.ang) * p.dist;
+  burst(V3(px, 1, pz), 0x8ad0ff, 60, 14, 1.4, -2, 6);
+  toast('填海造陆！岛屿向该方向扩张', '🏝️');
   refreshHUD();
   saveGame();
-}
-
-/* 占领填海地块（点击模式下由 main.ts 调用） */
-export function claimPatchAt(_e: PointerEvent): void {
-  S.expandMode = false;
-}
-
-export function setExpandMode(on: boolean): void {
-  S.expandMode = on;
 }

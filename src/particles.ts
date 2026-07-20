@@ -140,7 +140,19 @@ function resetDrop(d: RainDrop): void {
 rainDrops.forEach(resetDrop);
 
 export function updateRain(dt: number): void {
-  if (S.buffs.rain <= 0) return;
+  if (S.buffs.rain <= 0) {
+    // 雨停了：隐藏雨滴，并把所有雨滴归位到屏外，避免残影
+    if (rainPts.visible) {
+      rainPts.visible = false;
+      for (let i = 0; i < RAIN_N; i++) {
+        rPos[i * 3] = 0;
+        rPos[i * 3 + 1] = -999;
+        rPos[i * 3 + 2] = 0;
+      }
+      rainGeo.attributes.position.needsUpdate = true;
+    }
+    return;
+  }
   for (const d of rainDrops) {
     d.y -= d.sp * dt;
     if (d.y < 0) resetDrop(d);

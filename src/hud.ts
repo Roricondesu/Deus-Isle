@@ -92,9 +92,14 @@ export function refreshHUD(): void {
   }
 
   const eb = $('btn-expand') as HTMLButtonElement;
-  if (S.expand >= 3) {
+  if (S.expandMode) {
+    eb.innerHTML = icon(IC.target) + ' 取消选择<small style="display:block;font-size:9px;opacity:.75">点击海面圆形区域 / Esc</small>';
+    eb.disabled = false;
+    eb.classList.add('sel');
+  } else if (S.expand >= 3) {
     eb.innerHTML = icon(IC.island) + ' 岛屿已达最大';
     eb.disabled = true;
+    eb.classList.remove('sel');
   } else {
     const c = EXPAND_COST[S.expand];
     eb.innerHTML =
@@ -102,6 +107,7 @@ export function refreshHUD(): void {
       iconify(costText([c[0], c[1], 0])) +
       '</small>';
     eb.disabled = !canAfford([c[0], c[1], 0]);
+    eb.classList.remove('sel');
   }
 
   document.querySelectorAll('.b-card').forEach((el, i) => {

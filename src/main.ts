@@ -24,7 +24,8 @@ import {
   fireEvent,
   updateLaunch,
   eraUp,
-  tryExpand,
+  enterExpandMode,
+  autoUpgradeTick,
 } from './game';
 import { refreshHUD, renderDock, updateGodDock, toast, updateEraBadge } from './hud';
 import { saveGame, loadGame, clearSave } from './save';
@@ -93,6 +94,7 @@ function loop(): void {
     updatePrayer(dt);
     updateLaunch(dt);
     updateRain(dt);
+    autoUpgradeTick(gdt);
   }
   dayNight();
   paletteLerp(dt);
@@ -124,7 +126,7 @@ function bindButtons(): void {
   ($('btn-eraup') as HTMLButtonElement).onclick = () => eraUp();
 
   // 填海扩岛
-  ($('btn-expand') as HTMLButtonElement).onclick = () => tryExpand();
+  ($('btn-expand') as HTMLButtonElement).onclick = () => enterExpandMode();
 
   // 再玩一次
   $('btn-again').onclick = () => {

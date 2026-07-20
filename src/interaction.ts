@@ -11,6 +11,7 @@ import {
   costOf,
   costText,
   pay,
+  PATCHES,
   type CellEntry,
 } from './state';
 import { scene, camera, islandGroup } from './environment';
@@ -19,7 +20,7 @@ import { makeBuilding } from './buildings';
 import { burst } from './particles';
 import { sfx } from './audio';
 import { toast, refreshHUD, renderDock, floatText } from './hud';
-import { claimPatchAt } from './game';
+import { confirmExpand, cancelExpandMode } from './game';
 
 /* ================= 建造高亮 & 幽灵预览 ================= */
 export const highlight = new THREE.Mesh(
@@ -60,6 +61,64 @@ const GHOST_BAD = new THREE.MeshBasicMaterial({
   depthWrite: false,
 });
 
+/* ================= 扩岛位置预览（3 个候选 patch 圆盘） ================= */
+const patchMarkers: THREE.Mesh[] = [];
+for (let i = 0; i < 3; i++) {
+  const geo = new THREE.CircleGeometry(1, 40);
+  geo.rotateX(-Math.PI / 2);
+  const mat = new THREE.MeshBasicMaterial({
+    color: 0x7ad0ff,
+    transparent: true,
+    opacity: 0.45,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+  });
+  const m = new THREE.Mesh(geo, mat);
+  m.visible = false;
+  scene.add(m);
+  patchMarkers.push(m);
+}
+let hoverPatchIdx = -1;
+
+function updatePatchMarkers(): void {
+  hoverPatchIdx = -1;
+  if (!S.expandMode) {
+    for (const m of patchMarkers) m.visible = false;
+    return;
+  }
+  // 检测鼠标当前 hover 的 patch
+  _ray.setFromCamera(ndc, camera);
+  const hasHit = _ray.ray.intersectPlane(_plane, _hit);
+  PATCHES.forEach((p, i) => {
+    const m = patchMarkers[i];
+    if (!m) return;
+    const show = !p.owned;
+    m.visible = show;
+    if (!show) return;
+    const px = Math.cos(p.ang) * p.dist;
+    const pz = Math.sin(p.ang) * p.dist;
+    m.position.set(px, 0.06, pz);
+    m.scale.setScalar(p.r);
+    let hovered = false;
+    if (hasHit) {
+      const dx = _hit.x - px;
+      const dz = _hit.z - pz;
+      if (Math.hypot(dx, dz) < p.r) {
+        hovered = true;
+        hoverPatchIdx = i;
+      }
+    }
+    const mat = m.material as THREE.MeshBasicMaterial;
+    if (hovered) {
+      mat.color.setHex(0xffd76a);
+      mat.opacity = 0.7;
+    } else {
+      mat.color.setHex(0x7ad0ff);
+      mat.opacity = 0.45;
+    }
+  });
+}
+
 function refreshGhost(): void {
   if (S.sel === ghostType) return;
   ghostType = S.sel;
@@ -83,6 +142,7 @@ function refreshGhost(): void {
 
 export function updateHover(): void {
   refreshGhost();
+  updatePatchMarkers();
   if (!pointerOn || S.transitioning || S.over) {
     highlight.visible = false;
     hoverCell = null;
@@ -137,10 +197,15 @@ export function setupInteraction(): void {
     if (moved > 6) return;
     if (S.transitioning || S.over) return;
     if (S.expandMode) {
-      claimPatchAt(e);
+      if (hoverPatchIdx >= 0) confirmExpand(hoverPatchIdx);
+      else cancelExpandMode();
       return;
     }
     if (S.sel && hoverCell && hoverValid) tryBuild(hoverCell.x, hoverCell.z);
+  });
+  // ESC 取消扩岛模式
+  addEventListener('keydown', (e: KeyboardEvent) => {
+    if (e.key === 'Escape' && S.expandMode) cancelExpandMode();
   });
 }
 
