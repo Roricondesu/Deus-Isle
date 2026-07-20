@@ -8,7 +8,6 @@ import {
   SP,
   G,
   terrainMat,
-  setTerrainTransparent,
   rockMat,
   leafMat,
   foamMat,
@@ -119,7 +118,7 @@ export const waterMat = new THREE.MeshPhongMaterial({
 });
 const water = new THREE.Mesh(waterGeo, waterMat);
 water.rotation.x = -Math.PI / 2;
-water.position.y = 0;
+water.position.y = -0.4;
 water.receiveShadow = true;
 scene.add(water);
 const wBase = waterGeo.attributes.position.array.slice();
@@ -136,19 +135,15 @@ function buildTopGrid(cx: number, cz: number, size: number, res: number): THREE.
   const pos = geo.attributes.position;
   const n = pos.count;
   const colors = new Float32Array(n * 3);
-  const show = new Float32Array(n); // 1=岛上显示, 0=岛外丢弃
   const zones = new Uint8Array(n);
   const jit = new Float32Array(n);
   for (let i = 0; i < n; i++) {
     const h = landH(pos.getX(i) + cx, pos.getZ(i) + cz);
-    const onLand = h > 0;
-    pos.setY(i, onLand ? h : -0.5);
+    pos.setY(i, h < 0 ? -0.5 : h);
     zones[i] = h < 0.55 ? 0 : h > 1.85 ? 2 : 1; // 0 沙滩 1 草地 2 岩石
     jit[i] = rand(0.88, 1.06);
-    show[i] = onLand ? 1 : 0;
   }
   geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-  geo.setAttribute('aShow', new THREE.BufferAttribute(show, 1));
   geo.computeVertexNormals();
   const m = new THREE.Mesh(geo, terrainMat);
   m.receiveShadow = true;
@@ -210,13 +205,10 @@ export function recolorTerrain(): void {
     const zones = m.userData.zones as Uint8Array;
     const jit = m.userData.jit as Float32Array;
     const col = m.geometry.attributes.color as THREE.BufferAttribute;
-    const n = zones.length;
-    for (let i = 0; i < n; i++) {
+    for (let i = 0; i < zones.length; i++) {
       const z = zones[i];
       const j = jit[i];
-      // alpha 已在 buildTopGrid 中按是否岛上写入；岛外 alpha=0 → 不可见
-      const a = col.getW(i);
-      if (a > 0) col.setXYZW(i, _zc[z].r * j, _zc[z].g * j, _zc[z].b * j, a);
+      col.setXYZ(i, _zc[z].r * j, _zc[z].g * j, _zc[z].b * j);
     }
     col.needsUpdate = true;
   }

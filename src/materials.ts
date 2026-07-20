@@ -40,23 +40,8 @@ export const WIN_MAT = new THREE.MeshBasicMaterial({ color: 0x3a4a5a });
 /* 描边材质 */
 export const OL_MAT = new THREE.MeshBasicMaterial({ color: 0x14141c, side: THREE.BackSide });
 
-/* 全局共享材质：地形 / 草 / 石 / 浪
-   岛外顶点 alpha=0 → 在 fragment 中 discard，实现"挖洞"效果 */
-export const terrainMat = new THREE.MeshToonMaterial({
-  vertexColors: true,
-  gradientMap: gradTex,
-  side: THREE.DoubleSide,
-});
-terrainMat.onBeforeCompile = (shader) => {
-  shader.fragmentShader = shader.fragmentShader.replace(
-    '#include <color_fragment>',
-    `#include <color_fragment>
-     if (vColor.a < 0.5) discard;`,
-  );
-};
-
-/* 兼容旧调用（已无作用） */
-export function setTerrainTransparent(): void {}
+/* 全局共享材质：地形 / 草 / 石 / 浪 */
+export const terrainMat = new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: gradTex });
 export const rockMat = new THREE.MeshToonMaterial({ color: 0x8a7f6a, gradientMap: gradTex });
 export const leafMat = new THREE.MeshToonMaterial({ color: 0x4f9e3f, gradientMap: gradTex });
 export const foamMat = new THREE.MeshBasicMaterial({
