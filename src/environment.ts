@@ -16,6 +16,7 @@ import {
 } from './materials';
 import { ERAS } from './constants';
 import { $, V3, rand, randi, smooth, clamp, lerp } from './utils';
+import { icon, IC } from './icon';
 import {
   S,
   R,
@@ -484,7 +485,7 @@ export function dayNight(): void {
   starMat.opacity = 1 - dayF;
   WIN_MAT.color.set(dayF > 0.5 ? 0x46586a : 0xffd77a);
   waterMat.color.copy(PAL.water).multiplyScalar(0.35 + 0.65 * dayF);
-  $('clock').textContent = dayF > 0.6 ? '☀️' : duskF > 0.5 ? '🌇' : '🌙';
+  $('clock').innerHTML = icon(dayF > 0.6 ? IC.sun : duskF > 0.5 ? IC.sunset : IC.moon);
 }
 
 export function paletteLerp(dt: number): void {

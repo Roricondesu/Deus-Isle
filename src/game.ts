@@ -34,6 +34,7 @@ import {
   showVictory,
 } from './hud';
 import { placeBuilding, highlight } from './interaction';
+import { iconify } from './icon';
 import { saveGame } from './save';
 
 /* ================= 随机事件（直接修改 S） ================= */
@@ -213,7 +214,7 @@ export function spawnPrayer(): void {
   const p = pick(PRAYERS);
   const el = document.createElement('div');
   el.className = 'prayer';
-  el.textContent = p.txt;
+  el.innerHTML = iconify(p.txt);
   document.getElementById('prayers')!.appendChild(el);
   activePrayer = { c, el, p, life: 9 };
   el.onclick = () => {

@@ -1,4 +1,5 @@
 import { $ } from './utils';
+import { icon, IC } from './icon';
 
 /* ================= 极简 WebAudio 音效合成 ================= */
 let AC: AudioContext | null = null;
@@ -79,7 +80,9 @@ export function setupAudioToggle(): void {
   const btn = $('btn-mute');
   btn.onclick = () => {
     muted = !muted;
-    btn.textContent = muted ? '🔇' : '🔊';
+    btn.innerHTML = muted
+      ? icon(IC.soundOff)
+      : icon(IC.soundOn);
   };
 }
 

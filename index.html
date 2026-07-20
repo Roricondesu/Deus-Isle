@@ -5,12 +5,42 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>神明小岛 · Deus Isle</title>
 <style>
+  /* 注册阿里妈妈方圆体（可变字体） */
+  @font-face {
+    font-family: "Alimama FangYuanTi";
+    src: url("/fonts/AlimamaFangYuanTi.ttf") format("truetype-variations");
+    font-weight: 100 900;
+    font-display: swap;
+  }
   * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
   html,body { width:100%; height:100%; overflow:hidden; background:#0a0e1a;
-    font-family:"PingFang SC","Microsoft YaHei","Source Han Sans SC",system-ui,sans-serif;
+    font-family:"Alimama FangYuanTi","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    font-variation-settings:"wght" 500, "CNTR" 0;
     user-select:none; -webkit-user-select:none; }
   #stage { position:fixed; inset:0; }
   #stage canvas { display:block; }
+
+  /* ---------- SVG 图标（iconify-icon Web Component） ---------- */
+  iconify-icon {
+    display:inline-flex;
+    vertical-align:-0.125em;
+    width:1em; height:1em;
+    color:inherit;
+    fill:currentColor;
+    pointer-events:none;
+  }
+  #era-icon iconify-icon { width:26px; height:26px; filter:drop-shadow(0 0 6px rgba(255,220,120,.6)); }
+  .res iconify-icon { width:16px; height:16px; }
+  #clock iconify-icon { width:20px; height:20px; }
+  .icon-btn iconify-icon { width:18px; height:18px; }
+  .b-icon iconify-icon { width:24px; height:24px; }
+  .god-btn b iconify-icon { width:18px; height:18px; }
+  .act-btn iconify-icon, .big-btn iconify-icon { width:1.1em; height:1.1em; vertical-align:-0.18em; margin-right:4px; }
+  .floater iconify-icon { width:1em; height:1em; }
+  .toast iconify-icon { width:16px; height:16px; vertical-align:-0.15em; margin-right:6px; }
+  .prayer iconify-icon { width:13px; height:13px; vertical-align:-0.15em; margin-right:4px; }
+  #overlay-victory h1 iconify-icon, #overlay-intro h1 iconify-icon { width:1em; height:1em; vertical-align:-0.1em; margin-right:8px; }
+  .tips iconify-icon { width:14px; height:14px; vertical-align:-0.15em; margin:0 4px; }
 
   /* ---------- HUD 通用 ---------- */
   #ui { position:fixed; inset:0; pointer-events:none; z-index:10; }
@@ -23,7 +53,7 @@
   #topbar { position:absolute; top:12px; left:50%; transform:translateX(-50%);
     display:flex; align-items:center; gap:10px; padding:8px 14px; max-width:96vw; flex-wrap:wrap; justify-content:center; }
   #era-badge { display:flex; align-items:center; gap:8px; padding-right:12px; border-right:1px solid rgba(255,255,255,.15); }
-  #era-icon { font-size:26px; filter:drop-shadow(0 0 6px rgba(255,220,120,.6)); }
+  #era-icon { display:inline-flex; align-items:center; justify-content:center; width:26px; height:26px; }
   #era-name { color:#ffe9b0; font-weight:700; font-size:14px; letter-spacing:1px; white-space:nowrap; }
   #era-sub { color:rgba(255,255,255,.5); font-size:10px; letter-spacing:2px; }
   .res { display:flex; align-items:center; gap:4px; color:#fff; font-size:13px; font-weight:600;
@@ -31,9 +61,10 @@
   .res span { min-width:24px; text-align:right; font-variant-numeric:tabular-nums; }
   .res.flash { animation:resFlash .5s; }
   @keyframes resFlash { 0%{ background:rgba(255,220,120,.55);} 100%{ background:rgba(255,255,255,.06);} }
-  #clock { font-size:18px; width:34px; text-align:center; }
+  #clock { display:inline-flex; align-items:center; justify-content:center; width:34px; height:26px; }
   .icon-btn { width:34px; height:34px; border-radius:10px; border:1px solid rgba(255,255,255,.15);
-    background:rgba(255,255,255,.08); color:#fff; font-size:16px; cursor:pointer; transition:.2s; }
+    background:rgba(255,255,255,.08); color:#fff; font-size:16px; cursor:pointer; transition:.2s;
+    display:inline-flex; align-items:center; justify-content:center; }
   .icon-btn:hover { background:rgba(255,255,255,.2); transform:translateY(-1px); }
 
   /* ---------- 底栏 ---------- */
@@ -46,7 +77,7 @@
   .b-card:hover { background:rgba(255,255,255,.16); transform:translateY(-3px); }
   .b-card.sel { background:rgba(120,200,255,.25); border-color:#7ad0ff; box-shadow:0 0 14px rgba(120,200,255,.5); }
   .b-card.poor { opacity:.38; filter:grayscale(.6); }
-  .b-icon { font-size:24px; }
+  .b-icon { font-size:24px; display:flex; align-items:center; justify-content:center; }
   .b-name { color:#fff; font-size:11px; font-weight:600; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .b-cost { color:#ffd98a; font-size:9px; margin-top:1px; white-space:nowrap; }
   #side-dock { display:flex; flex-direction:column; gap:8px; padding:10px; }
@@ -58,14 +89,16 @@
   .god-btn.poor { opacity:.4; filter:grayscale(.7); cursor:not-allowed; }
   .god-btn.cd { cursor:not-allowed; }
   .god-btn .cdmask { position:absolute; inset:0; background:rgba(0,0,0,.55); transform-origin:bottom; }
-  .god-btn b { display:block; font-size:16px; }
+  .god-btn b { display:flex; align-items:center; justify-content:center; font-size:16px; margin-bottom:2px; }
   .act-btn { border:none; border-radius:12px; padding:8px 14px; font-size:13px; font-weight:700; cursor:pointer;
-    color:#1a1405; background:linear-gradient(135deg,#ffd76a,#ff9a3c); transition:.2s; letter-spacing:1px; }
+    color:#1a1405; background:linear-gradient(135deg,#ffd76a,#ff9a3c); transition:.2s; letter-spacing:1px;
+    display:inline-flex; align-items:center; justify-content:center; }
   .act-btn:hover:not(:disabled) { transform:translateY(-2px); box-shadow:0 6px 18px rgba(255,170,60,.45); }
   .act-btn:disabled { filter:grayscale(.85); opacity:.5; cursor:not-allowed; }
   #btn-eraup { background:linear-gradient(135deg,#8affc1,#3cd6a0); }
   #btn-eraup.ready { animation:pulseGlow 1.4s infinite; }
   #btn-eraup small { display:block; font-size:9px; font-weight:500; opacity:.75; margin-top:2px; letter-spacing:0; }
+  #btn-eraup small iconify-icon { width:11px; height:11px; vertical-align:-0.1em; margin:0 1px; }
   @keyframes pulseGlow { 0%,100%{ box-shadow:0 0 8px rgba(120,255,190,.4);} 50%{ box-shadow:0 0 24px rgba(120,255,190,.95);} }
   .btn-launch { background:linear-gradient(135deg,#ff8a8a,#d63c3c) !important; color:#fff !important; animation:pulseGlowR 1.2s infinite; }
   @keyframes pulseGlowR { 0%,100%{ box-shadow:0 0 10px rgba(255,100,100,.5);} 50%{ box-shadow:0 0 30px rgba(255,80,80,1);} }
@@ -74,7 +107,8 @@
   #toasts { position:absolute; top:70px; right:14px; display:flex; flex-direction:column; gap:8px; pointer-events:none !important; }
   .toast { padding:10px 16px; border-radius:12px; color:#fff; font-size:13px; font-weight:600;
     background:rgba(15,20,40,.85); border:1px solid rgba(255,255,255,.15); border-left:4px solid #ffd76a;
-    animation:toastIn .4s cubic-bezier(.2,1.4,.4,1); max-width:280px; box-shadow:0 6px 20px rgba(0,0,0,.4); }
+    animation:toastIn .4s cubic-bezier(.2,1.4,.4,1); max-width:280px; box-shadow:0 6px 20px rgba(0,0,0,.4);
+    display:flex; align-items:center; }
   .toast.out { animation:toastOut .4s forwards; }
   @keyframes toastIn { from{ transform:translateX(120%); opacity:0;} to{ transform:none; opacity:1;} }
   @keyframes toastOut { to{ transform:translateX(120%); opacity:0;} }
@@ -82,13 +116,14 @@
   .prayer { position:absolute; transform:translate(-50%,-110%); cursor:pointer; pointer-events:auto !important;
     background:linear-gradient(160deg,#fff8e8,#ffe9b8); color:#5a4410; font-size:12px; font-weight:700;
     padding:7px 12px; border-radius:14px; white-space:nowrap; animation:prayBob 2s ease-in-out infinite;
-    box-shadow:0 4px 14px rgba(0,0,0,.3); border:1.5px solid #d9b25a; }
+    box-shadow:0 4px 14px rgba(0,0,0,.3); border:1.5px solid #d9b25a; display:inline-flex; align-items:center; }
   .prayer::after { content:""; position:absolute; left:50%; bottom:-7px; transform:translateX(-50%);
     border:7px solid transparent; border-top-color:#ffe9b8; border-bottom:none; }
   .prayer:hover { filter:brightness(1.1); }
   @keyframes prayBob { 0%,100%{ margin-top:0;} 50%{ margin-top:-7px;} }
   .floater { position:absolute; transform:translate(-50%,-50%); font-size:13px; font-weight:800; pointer-events:none !important;
-    text-shadow:0 2px 4px rgba(0,0,0,.6); animation:floatUp 1.4s ease-out forwards; }
+    text-shadow:0 2px 4px rgba(0,0,0,.6); animation:floatUp 1.4s ease-out forwards;
+    display:inline-flex; align-items:center; gap:2px; }
   @keyframes floatUp { 0%{ opacity:0; margin-top:6px;} 15%{ opacity:1;} 100%{ opacity:0; margin-top:-44px;} }
 
   /* ---------- 覆盖层 ---------- */
@@ -97,14 +132,15 @@
     transition:opacity .6s; }
   .overlay.hidden { opacity:0; pointer-events:none; }
   #overlay-intro h1 { font-size:min(64px,11vw); color:#ffe9b0; letter-spacing:14px; font-weight:900;
-    text-shadow:0 0 40px rgba(255,200,90,.55), 0 4px 0 rgba(120,70,0,.4); animation:titleFloat 3s ease-in-out infinite; }
+    text-shadow:0 0 40px rgba(255,200,90,.55), 0 4px 0 rgba(120,70,0,.4); animation:titleFloat 3s ease-in-out infinite;
+    display:flex; align-items:center; }
   @keyframes titleFloat { 0%,100%{ transform:translateY(0);} 50%{ transform:translateY(-10px);} }
   #overlay-intro .sub { color:#8ad0ff; letter-spacing:8px; font-size:14px; margin-top:6px; }
   #overlay-intro .desc { color:rgba(255,255,255,.82); font-size:15px; margin:26px 0 8px; text-align:center; line-height:1.9; }
   #overlay-intro .tips { color:rgba(255,255,255,.45); font-size:12px; line-height:2; text-align:center; margin-bottom:28px; }
   .big-btn { border:none; border-radius:999px; padding:16px 54px; font-size:19px; font-weight:900; letter-spacing:6px;
     color:#24160a; background:linear-gradient(135deg,#ffe9a0,#ffb84d); cursor:pointer; transition:.25s;
-    box-shadow:0 0 34px rgba(255,190,80,.45); }
+    box-shadow:0 0 34px rgba(255,190,80,.45); display:inline-flex; align-items:center; justify-content:center; }
   .big-btn:hover { transform:scale(1.06); box-shadow:0 0 54px rgba(255,190,80,.8); }
 
   #overlay-era { pointer-events:none; background:radial-gradient(ellipse at center,rgba(20,26,50,.25),rgba(5,8,18,.75)); }
@@ -117,7 +153,7 @@
   #era-anim-sub { font-size:16px; color:#9fd0ff; letter-spacing:10px; margin-top:14px; }
 
   #overlay-victory h1 { font-size:min(52px,9vw); color:#ffd0d0; letter-spacing:10px; font-weight:900;
-    text-shadow:0 0 50px rgba(255,120,120,.8); }
+    text-shadow:0 0 50px rgba(255,120,120,.8); display:flex; align-items:center; }
   #v-stats { display:flex; gap:26px; margin:30px 0 34px; flex-wrap:wrap; justify-content:center; }
   .v-stat { text-align:center; } .v-stat b { display:block; font-size:34px; color:#ffe9b0; }
   .v-stat span { color:rgba(255,255,255,.55); font-size:12px; letter-spacing:2px; }
@@ -131,7 +167,12 @@
     #build-dock { max-width:58vw; } .b-card { width:62px; } .b-name { font-size:10px; }
     #topbar { gap:6px; padding:6px 8px; } .res { font-size:11px; padding:3px 5px; }
   }
+
+  /* 可变字体粗细辅助类 */
+  .w-bold { font-variation-settings:"wght" 800; }
+  .w-black { font-variation-settings:"wght" 900; }
 </style>
+<script src="https://code.iconify.design/iconify-icon/2.3.0/iconify-icon.min.js"></script>
 </head>
 <body>
 <div id="stage"></div>
@@ -139,18 +180,18 @@
 <div id="ui">
   <div id="topbar" class="glass">
     <div id="era-badge">
-      <span id="era-icon">🔥</span>
+      <span id="era-icon"><iconify-icon icon="mdi:fire"></iconify-icon></span>
       <div><div id="era-name">远古时期</div><div id="era-sub">第 1 纪元</div></div>
     </div>
-    <div class="res" title="食物：市民的口粮，农场产出">🌾<span id="r-food">0</span></div>
-    <div class="res" title="木材：建造的基础材料">🪵<span id="r-wood">0</span></div>
-    <div class="res" title="金币：税收与贸易">🪙<span id="r-gold">0</span></div>
-    <div class="res" title="信仰：施展神迹的力量">✨<span id="r-faith">0</span></div>
-    <div class="res" title="人口 / 住房容量">🧑<span id="r-pop">0/0</span></div>
-    <div class="res" title="幸福度">😊<span id="r-happy">0</span></div>
-    <div id="clock" title="昼夜">☀️</div>
-    <button class="icon-btn" id="btn-mute" title="音效开关">🔊</button>
-    <button class="icon-btn" id="btn-reset" title="重置存档">↺</button>
+    <div class="res" title="食物：市民的口粮，农场产出"><iconify-icon icon="mdi:wheat"></iconify-icon><span id="r-food">0</span></div>
+    <div class="res" title="木材：建造的基础材料"><iconify-icon icon="ph:tree-fill"></iconify-icon><span id="r-wood">0</span></div>
+    <div class="res" title="金币：税收与贸易"><iconify-icon icon="mdi:circle-multiple"></iconify-icon><span id="r-gold">0</span></div>
+    <div class="res" title="信仰：施展神迹的力量"><iconify-icon icon="mdi:star-shooting"></iconify-icon><span id="r-faith">0</span></div>
+    <div class="res" title="人口 / 住房容量"><iconify-icon icon="mdi:account-group"></iconify-icon><span id="r-pop">0/0</span></div>
+    <div class="res" title="幸福度"><iconify-icon icon="mdi:emoticon-happy"></iconify-icon><span id="r-happy">0</span></div>
+    <div id="clock" title="昼夜"><iconify-icon icon="mdi:weather-sunny"></iconify-icon></div>
+    <button class="icon-btn" id="btn-mute" title="音效开关"><iconify-icon icon="mdi:volume-high"></iconify-icon></button>
+    <button class="icon-btn" id="btn-reset" title="重置存档"><iconify-icon icon="mdi:reload"></iconify-icon></button>
   </div>
 
   <div id="toasts"></div>
@@ -160,8 +201,8 @@
     <div id="build-dock" class="glass"></div>
     <div id="side-dock" class="glass">
       <div id="god-dock"></div>
-      <button class="act-btn" id="btn-expand">🏝️ 填海扩岛</button>
-      <button class="act-btn" id="btn-eraup" disabled>⏫ 时代跃迁</button>
+      <button class="act-btn" id="btn-expand"><iconify-icon icon="mdi:island"></iconify-icon>填海扩岛</button>
+      <button class="act-btn" id="btn-eraup" disabled><iconify-icon icon="mdi:arrow-up-bold"></iconify-icon>时代跃迁</button>
     </div>
   </div>
 </div>
@@ -172,10 +213,10 @@
   <h1>神明小岛</h1>
   <div class="sub">DEUS ISLE · 文 明 演 化 模 拟</div>
   <div class="desc">你是这座小岛的上帝。<br>引导你的子民，从远古篝火，一路走向星辰大海。</div>
-  <div class="tips">🖱️ 拖拽旋转视角 · 滚轮缩放 · 点击下方卡片后在岛上建造<br>
-    💬 点击祈祷气泡回应子民 · ✨ 用神迹帮助他们（或捣乱）<br>
-    🏛️ 每个时代建造一座奇观，集齐条件即可让文明跃迁</div>
-  <button class="big-btn" id="btn-start">✨ 开始创造</button>
+  <div class="tips"><iconify-icon icon="mdi:mouse"></iconify-icon>拖拽旋转视角 · 滚轮缩放 · 点击下方卡片后在岛上建造<br>
+    <iconify-icon icon="mdi:chat"></iconify-icon>点击祈祷气泡回应子民 · <iconify-icon icon="mdi:star-shooting"></iconify-icon>用神迹帮助他们（或捣乱）<br>
+    <iconify-icon icon="mdi:bank"></iconify-icon>每个时代建造一座奇观，集齐条件即可让文明跃迁</div>
+  <button class="big-btn" id="btn-start"><iconify-icon icon="mdi:star-shooting"></iconify-icon>开始创造</button>
 </div>
 
 <div class="overlay hidden" id="overlay-era">
@@ -183,10 +224,10 @@
 </div>
 
 <div class="overlay hidden" id="overlay-victory">
-  <h1>🚀 文明起航</h1>
+  <h1><iconify-icon icon="mdi:rocket"></iconify-icon>文明起航</h1>
   <div class="desc" style="color:rgba(255,255,255,.8);margin-top:14px;">整座小岛化作方舟，载着你的孩子驶向群星。<br>从一堆篝火到一艘星舰——这是属于你的一文明史。</div>
   <div id="v-stats"></div>
-  <button class="big-btn" id="btn-again">🌱 再育一代文明</button>
+  <button class="big-btn" id="btn-again"><iconify-icon icon="mdi:sprout"></iconify-icon>再育一代文明</button>
 </div>
 
 <script type="module" src="/src/main.ts"></script>
