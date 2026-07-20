@@ -65,7 +65,8 @@ terrainMat.onBeforeCompile = (shader) => {
   ).replace(
     '#include <color_fragment>',
     `#include <color_fragment>
-     if (vAlpha < 0.5) discard;`,
+     if (vAlpha < 0.02) discard;
+     diffuseColor.rgb *= vAlpha;`,
   );
 };
 export const rockMat = new THREE.MeshToonMaterial({ color: 0x8a7f6a, gradientMap: gradTex });

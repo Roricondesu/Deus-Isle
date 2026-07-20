@@ -144,7 +144,8 @@ function buildTopGrid(cx: number, cz: number, size: number, res: number): THREE.
     pos.setY(i, onLand ? h : -0.5);
     zones[i] = h < 0.55 ? 0 : h > 1.85 ? 2 : 1; // 0 沙滩 1 草地 2 岩石
     jit[i] = rand(0.88, 1.06);
-    colors[i * 4 + 3] = onLand ? 1 : 0;
+    // 边缘 alpha 平滑过渡：h>0.3 完全显示，h<-0.2 完全消失
+    colors[i * 4 + 3] = smooth(-0.2, 0.3, h);
   }
   geo.setAttribute('color', new THREE.BufferAttribute(colors, 4));
   geo.computeVertexNormals();
@@ -498,7 +499,7 @@ export function paletteLerp(dt: number): void {
 export function waterWave(t: number): void {
   const p = waterGeo.attributes.position.array as Float32Array;
   for (let i = 0; i < p.length; i += 3) {
-    p[i + 2] = Math.sin(p[i] * 0.14 + t * 1.1) * 0.32 + Math.cos(p[i + 1] * 0.12 + t * 0.9) * 0.32;
+    p[i + 2] = Math.sin(p[i] * 0.14 + t * 1.1) * 0.12 + Math.cos(p[i + 1] * 0.12 + t * 0.9) * 0.12;
   }
   waterGeo.attributes.position.needsUpdate = true;
   foamMeshes.forEach((f) => f.scale.setScalar(1 + Math.sin(t * 1.4) * 0.02));
@@ -511,7 +512,7 @@ export function envMove(dt: number, t: number): void {
     if (c.position.x > 90) c.position.x = -90;
   });
   // 船：持续绕岛航行
-  const seaY = -0.4 + Math.sin(t * 1.3) * 0.12;
+  const seaY = -0.4 + Math.sin(t * 1.3) * 0.05;
   const bt = t * 0.12;
   boat.position.set(
     Math.cos(bt) * (R() + 7) + islandGroup.position.x,
