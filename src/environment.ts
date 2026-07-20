@@ -139,7 +139,7 @@ function buildTopGrid(cx: number, cz: number, size: number, res: number): THREE.
   const jit = new Float32Array(n);
   for (let i = 0; i < n; i++) {
     const h = landH(pos.getX(i) + cx, pos.getZ(i) + cz);
-    pos.setY(i, h < 0 ? -0.6 : h);
+    pos.setY(i, h < 0 ? -3.2 : h);
     zones[i] = h < 0.55 ? 0 : h > 1.85 ? 2 : 1; // 0 沙滩 1 草地 2 岩石
     jit[i] = rand(0.88, 1.06);
   }
