@@ -71,6 +71,40 @@ terrainMat.onBeforeCompile = (shader) => {
 };
 export const rockMat = new THREE.MeshToonMaterial({ color: 0x8a7f6a, gradientMap: gradTex });
 export const leafMat = new THREE.MeshToonMaterial({ color: 0x4f9e3f, gradientMap: gradTex });
+
+/* 底部岩石材质：复用 terrainMat 的顶点 alpha 挖洞机制 + 双面可见
+   只在岛屿轮廓内显示，岛外 discard；从下方看也能受光 */
+export const undersideMat = new THREE.MeshToonMaterial({
+  vertexColors: true,
+  gradientMap: gradTex,
+  transparent: true,
+  side: THREE.DoubleSide,
+});
+undersideMat.onBeforeCompile = (shader) => {
+  shader.vertexShader = shader.vertexShader
+    .replace(
+      '#include <color_pars_vertex>',
+      `#include <color_pars_vertex>
+     varying float vAlpha;`,
+    )
+    .replace(
+      '#include <color_vertex>',
+      `#include <color_vertex>
+     vAlpha = color.a;`,
+    );
+  shader.fragmentShader = shader.fragmentShader
+    .replace(
+      '#include <color_pars_fragment>',
+      `#include <color_pars_fragment>
+     varying float vAlpha;`,
+    )
+    .replace(
+      '#include <color_fragment>',
+      `#include <color_fragment>
+     if (vAlpha < 0.02) discard;
+     diffuseColor.rgb *= vAlpha;`,
+    );
+};
 export const foamMat = new THREE.MeshBasicMaterial({
   color: 0xffffff,
   transparent: true,

@@ -13,6 +13,7 @@ import {
   foamMat,
   WIN_MAT,
   gradTex,
+  undersideMat,
 } from './materials';
 import { ERAS } from './constants';
 import { $, V3, rand, randi, smooth, clamp, lerp } from './utils';
@@ -111,51 +112,51 @@ world.add(islandGroup);
 /* ================= 起飞底部岩石建模（升空时才显示） ================= */
 let undersideGroup: THREE.Group | null = null;
 
-/** 生成岛屿底部：复用 landH 但翻转 y 并起伏×2，染岩石色 */
+/** 生成岛屿底部：复用 landH 但翻转 y 并起伏×2，染岩石色
+ *  顶点 alpha 与主岛地形同步挖洞：只在岛屿轮廓内可见，岛外 discard */
 export function buildIslandUnderside(): THREE.Group {
   if (undersideGroup) return undersideGroup;
   const g = new THREE.Group();
-  // 与主岛地形同样的网格范围
-  const size = (R() + 9) * 2;
-  const res = 1;
-  const seg = Math.ceil(size / res);
-  const geo = new THREE.PlaneGeometry(size, size, seg, seg);
-  geo.rotateX(-Math.PI / 2);
-  const pos = geo.attributes.position;
-  const n = pos.count;
-  for (let i = 0; i < n; i++) {
-    const h = landH(pos.getX(i), pos.getZ(i));
-    // 翻转 y 并放大起伏 2 倍；岛外（h<=0）也跟随，形成自然延伸的底部
-    pos.setY(i, h > 0 ? -h * 2 : h * 2);
-  }
-  geo.computeVertexNormals();
-  const mesh = new THREE.Mesh(geo, rockMat);
-  mesh.receiveShadow = true;
-  mesh.castShadow = true;
-  g.add(mesh);
-  // patch 上的底部也对应翻转
+  const rock = new THREE.Color(0x8a7f6a);
+
+  // 单块底面网格：在 (cx, cz) 周围 size×size 范围采样 landH 并翻转
+  const buildSlab = (cx: number, cz: number, size: number, res: number) => {
+    const seg = Math.ceil(size / res);
+    const geo = new THREE.PlaneGeometry(size, size, seg, seg);
+    geo.rotateX(-Math.PI / 2);
+    const pos = geo.attributes.position;
+    const n = pos.count;
+    const colors = new Float32Array(n * 4); // RGBA，岛外 alpha=0 → discard
+    for (let i = 0; i < n; i++) {
+      const h = landH(pos.getX(i) + cx, pos.getZ(i) + cz);
+      // 翻转 y 并放大起伏 2 倍；岛外（h<=0）也跟随下沉，但 alpha=0 不显示
+      pos.setY(i, h > 0 ? -h * 2 : h * 2);
+      // 边缘 alpha 与主岛地形同步：h>0.3 完全显示，h<-0.2 完全消失
+      const a = smooth(-0.2, 0.3, h);
+      colors[i * 4 + 0] = rock.r;
+      colors[i * 4 + 1] = rock.g;
+      colors[i * 4 + 2] = rock.b;
+      colors[i * 4 + 3] = a;
+    }
+    geo.setAttribute('color', new THREE.BufferAttribute(colors, 4));
+    geo.computeVertexNormals();
+    const mesh = new THREE.Mesh(geo, undersideMat);
+    mesh.position.set(cx, 0, cz);
+    mesh.receiveShadow = true;
+    mesh.castShadow = true;
+    g.add(mesh);
+  };
+
+  // 主岛底部
+  buildSlab(0, 0, (R() + 9) * 2, 1);
+  // 每个 patch 的底部
   PATCHES.forEach((p) => {
     if (!p.owned) return;
     const px = Math.cos(p.ang) * p.dist;
     const pz = Math.sin(p.ang) * p.dist;
-    const psize = (p.r + 4) * 2;
-    const pres = 0.9;
-    const pseg = Math.ceil(psize / pres);
-    const pgeo = new THREE.PlaneGeometry(psize, psize, pseg, pseg);
-    pgeo.rotateX(-Math.PI / 2);
-    const ppos = pgeo.attributes.position;
-    const pn = ppos.count;
-    for (let i = 0; i < pn; i++) {
-      const h = landH(ppos.getX(i) + px, ppos.getZ(i) + pz);
-      ppos.setY(i, h > 0 ? -h * 2 : h * 2);
-    }
-    pgeo.computeVertexNormals();
-    const pm = new THREE.Mesh(pgeo, rockMat);
-    pm.position.set(px, 0, pz);
-    pm.receiveShadow = true;
-    pm.castShadow = true;
-    g.add(pm);
+    buildSlab(px, pz, (p.r + 4) * 2, 0.9);
   });
+
   g.visible = false; // 默认隐藏，起飞时显示
   islandGroup.add(g);
   undersideGroup = g;
