@@ -404,31 +404,8 @@ for (let i = 0; i < 3; i++) {
 // 灯室
 const lampY = baseY + 1.75;
 portGroup.add(C(0.34, 0.3, 0.2, 12, 0x2a2a2a, { x: 0, y: lampY }));
-// 锥形光束：父 Group 绕灯塔 Y 轴旋转扫海，beam 自身朝外倾斜
-const beamHeight = lampY + 8;
-const beamMat = new THREE.MeshBasicMaterial({
-  color: 0xffe98a,
-  transparent: true,
-  opacity: 0,
-  blending: THREE.AdditiveBlending,
-  depthWrite: false,
-  side: THREE.DoubleSide,
-  fog: false,
-});
-const beamPivot = new THREE.Group();
-beamPivot.position.set(0, lampY, 0);
-portGroup.add(beamPivot);
-const beam = new THREE.Mesh(
-  new THREE.CylinderGeometry(0.1, 6, beamHeight, 24, 1, true),
-  beamMat,
-);
-// radiusTop=0 是顶点，在 +Y 侧；底面在 -Y 侧
-// 绕 Z 轴倾斜 ~55°，让顶点保持在灯室、底面落到岛外海面
-beam.rotation.z = Math.PI * 0.3;
-beam.position.set(0, -beamHeight / 2, 0);
-beamPivot.add(beam);
 // 灯泡
-const lampMat = new THREE.MeshBasicMaterial({ color: 0xffe98a, fog: false, transparent: true, opacity: 0 });
+const lampMat = new THREE.MeshBasicMaterial({ color: 0xffe98a, fog: false });
 const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.14, 10, 8), lampMat);
 lamp.position.set(0, lampY, 0);
 portGroup.add(lamp);
@@ -533,44 +510,16 @@ export function envMove(dt: number, t: number): void {
     c.position.x += c.userData.sp * dt;
     if (c.position.x > 90) c.position.x = -90;
   });
-  // 船：绕岛航行，周期性靠港停泊（周期 30 秒，停泊 6 秒）
-  const cycle = 30;
-  const phase = (t % cycle) / cycle; // 0..1
-  const docked = phase > 0.8; // 最后 20% 时间靠港
-  const bt = phase * Math.PI * 2;
+  // 船：持续绕岛航行
   const seaY = -0.4 + Math.sin(t * 1.3) * 0.12;
-  if (docked) {
-    // 停泊在码头边（码头外端 x≈3.6 in portGroup local, portGroup 在 islandGroup）
-    const localTarget = new THREE.Vector3(3.6, seaY, 0);
-    // 转换到世界坐标（考虑 islandGroup 可能因发射升空而 position 改变）
-    const wp = portGroup.localToWorld(localTarget.clone());
-    const k = (phase - 0.8) / 0.2; // 0..1 平滑靠港
-    const ease = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
-    const outAngle = portAng - Math.PI / 2;
-    const startWorld = new THREE.Vector3(
-      Math.cos(outAngle) * (R() + 4) + islandGroup.position.x,
-      seaY,
-      Math.sin(outAngle) * (R() + 4) + islandGroup.position.z,
-    );
-    boat.position.lerpVectors(startWorld, wp, ease);
-    boat.rotation.y = -portAng; // 朝向港口
-    boat.rotation.z = Math.sin(t * 1.3) * 0.03;
-  } else {
-    // 航行：绕岛大圆，停在港外开始
-    const ang = portAng - Math.PI / 2 + bt * 0.9;
-    boat.position.set(
-      Math.cos(ang) * (R() + 5) + islandGroup.position.x,
-      seaY,
-      Math.sin(ang) * (R() + 5) + islandGroup.position.z,
-    );
-    boat.rotation.y = -ang + Math.PI / 2;
-    boat.rotation.z = Math.sin(t * 1.3) * 0.05;
-  }
-  // 灯塔：只在夜晚亮（dayF<0.5），圆锥光束绕 Y 轴旋转扫海
-  const nightF = 1 - dayF; // 0 白天, 1 夜晚
-  beamPivot.rotation.y = t * 1.0; // 缓慢扫海
-  beamMat.opacity = nightF * (0.22 + 0.12 * Math.abs(Math.sin(t * 1.0)));
-  lampMat.opacity = nightF * (0.6 + 0.4 * Math.abs(Math.sin(t * 3)));
+  const bt = t * 0.12;
+  boat.position.set(
+    Math.cos(bt) * (R() + 7) + islandGroup.position.x,
+    seaY,
+    Math.sin(bt) * (R() + 7) + islandGroup.position.z,
+  );
+  boat.rotation.y = -bt + Math.PI / 2;
+  boat.rotation.z = Math.sin(t * 1.3) * 0.05;
   birds.forEach((b) => {
     const u = b.userData;
     const a = t * u.sp + u.ph;

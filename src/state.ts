@@ -99,9 +99,9 @@ export function outlineR(a: number): number {
   return (
     (R() - 1.6) *
     (1 +
-      0.13 * Math.sin(3 * a + SEED) +
-      0.09 * Math.sin(5 * a + SEED * 2.1) +
-      0.06 * Math.sin(8 * a + SEED * 3.7))
+      0.08 * Math.sin(3 * a + SEED) +
+      0.05 * Math.sin(5 * a + SEED * 2.1) +
+      0.03 * Math.sin(8 * a + SEED * 3.7))
   );
 }
 
@@ -115,7 +115,7 @@ export function landH(x: number, z: number): number {
     a = Math.atan2(z, x),
     ro = outlineR(a);
   if (d < ro) {
-    const fall = smooth(ro, ro - 2.8, d);
+    const fall = smooth(ro, ro - 4.0, d);
     best = fall * (1.05 + hnoise(x, z) * 0.85);
   }
   for (const p of PATCHES) {
@@ -126,7 +126,7 @@ export function landH(x: number, z: number): number {
       aa = Math.atan2(z - pz, x - px),
       pr = patchR(p, aa);
     if (dd < pr) {
-      const fall = smooth(pr, pr - 2, dd);
+      const fall = smooth(pr, pr - 3.0, dd);
       best = Math.max(best, fall * (0.85 + hnoise(x + 40, z - 30) * 0.4));
     }
   }
