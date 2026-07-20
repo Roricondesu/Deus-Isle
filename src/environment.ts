@@ -20,6 +20,7 @@ import {
   S,
   R,
   PATCHES,
+  SEED,
   landH,
   outlineR,
   patchR,
@@ -363,6 +364,61 @@ boat.add(C(0.04, 0.04, 1.6, 6, 0x6a4a2a, { y: 1.2, ol: false }));
 boat.add(B(0.7, 0.9, 0.04, 0xf0e8d8, { x: 0.35, y: 1.25, ol: false }));
 scene.add(boat);
 
+/* ================= 港口：码头 + 灯塔（带旋转光带 + 闪烁灯） ================= */
+export const portGroup = G();
+// 找一个岛外缘的角度作为港口位置
+const portAng = SEED % (Math.PI * 2);
+const portX = Math.cos(portAng) * (R() - 1);
+const portZ = Math.sin(portAng) * (R() - 1);
+portGroup.position.set(portX, 0, portZ);
+portGroup.rotation.y = -portAng + Math.PI / 2;
+islandGroup.add(portGroup);
+
+// 码头平台
+const dock = B(2.4, 0.18, 1.2, 0xb88a5a, { y: 0.15, x: 1.6, ol: false });
+portGroup.add(dock);
+// 码头支柱
+for (const [px, pz] of [
+  [0.6, -0.45],
+  [0.6, 0.45],
+  [2.6, -0.45],
+  [2.6, 0.45],
+] as [number, number][]) {
+  portGroup.add(C(0.08, 0.08, 1.0, 6, 0x6a4a2a, { x: px, y: -0.3, z: pz, ol: false }));
+}
+// 系缆桩
+portGroup.add(C(0.1, 0.18, 0.1, 8, 0x4a3a2a, { x: 0.7, y: 0.32, z: -0.4, ol: false }));
+portGroup.add(C(0.1, 0.18, 0.1, 8, 0x4a3a2a, { x: 0.7, y: 0.32, z: 0.4, ol: false }));
+
+// 灯塔基座
+portGroup.add(B(0.8, 0.2, 0.8, 0x8a8a8a, { y: 0.1 }));
+// 塔身（红白条纹）
+const tower = C(0.32, 0.36, 1.4, 12, 0xf0e8d8, { y: 0.95 });
+portGroup.add(tower);
+for (let i = 0; i < 3; i++) {
+  portGroup.add(C(0.33, 0.37, 0.12, 12, 0xd04a3a, { y: 0.45 + i * 0.45, ol: false }));
+}
+// 灯室
+portGroup.add(C(0.34, 0.3, 0.2, 12, 0x2a2a2a, { y: 1.75 }));
+// 旋转光束（用细长平面 + 旋转 + 加色）
+const beamMat = new THREE.MeshBasicMaterial({
+  color: 0xffe98a,
+  transparent: true,
+  opacity: 0.32,
+  blending: THREE.AdditiveBlending,
+  depthWrite: false,
+  side: THREE.DoubleSide,
+  fog: false,
+});
+const beam = new THREE.Mesh(new THREE.PlaneGeometry(20, 1.6), beamMat);
+beam.position.y = 1.75;
+portGroup.add(beam);
+// 灯泡
+const lampMat = new THREE.MeshBasicMaterial({ color: 0xffe98a, fog: false });
+const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.14, 10, 8), lampMat);
+lamp.position.y = 1.75;
+portGroup.add(lamp);
+
 const birds: THREE.Group[] = [];
 for (let i = 0; i < 4; i++) {
   const b = G();
@@ -463,10 +519,42 @@ export function envMove(dt: number, t: number): void {
     c.position.x += c.userData.sp * dt;
     if (c.position.x > 90) c.position.x = -90;
   });
-  const bt = t * 0.12;
-  boat.position.set(Math.cos(bt) * (R() + 7), -1.9 + Math.sin(t * 1.3) * 0.15, Math.sin(bt) * (R() + 7));
-  boat.rotation.y = -bt + Math.PI / 2;
-  boat.rotation.z = Math.sin(t * 1.3) * 0.05;
+  // 船：绕岛航行，周期性靠港停泊（周期 30 秒，停泊 6 秒）
+  const cycle = 30;
+  const phase = (t % cycle) / cycle; // 0..1
+  const docked = phase > 0.8; // 最后 20% 时间靠港
+  const bt = phase * Math.PI * 2;
+  const seaY = -0.4 + Math.sin(t * 1.3) * 0.12;
+  if (docked) {
+    // 停泊在码头边（码头外端 x≈3.6 in portGroup local, portGroup 在 islandGroup）
+    const localTarget = new THREE.Vector3(3.6, seaY, 0);
+    // 转换到世界坐标（考虑 islandGroup 可能因发射升空而 position 改变）
+    const wp = portGroup.localToWorld(localTarget.clone());
+    const k = (phase - 0.8) / 0.2; // 0..1 平滑靠港
+    const ease = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+    const outAngle = portAng - Math.PI / 2;
+    const startWorld = new THREE.Vector3(
+      Math.cos(outAngle) * (R() + 4) + islandGroup.position.x,
+      seaY,
+      Math.sin(outAngle) * (R() + 4) + islandGroup.position.z,
+    );
+    boat.position.lerpVectors(startWorld, wp, ease);
+    boat.rotation.y = -portAng; // 朝向港口
+    boat.rotation.z = Math.sin(t * 1.3) * 0.03;
+  } else {
+    // 航行：绕岛大圆，停在港外开始
+    const ang = portAng - Math.PI / 2 + bt * 0.9;
+    boat.position.set(
+      Math.cos(ang) * (R() + 5) + islandGroup.position.x,
+      seaY,
+      Math.sin(ang) * (R() + 5) + islandGroup.position.z,
+    );
+    boat.rotation.y = -ang + Math.PI / 2;
+    boat.rotation.z = Math.sin(t * 1.3) * 0.05;
+  }
+  // 灯塔光束旋转
+  beam.rotation.y = t * 1.4;
+  lampMat.opacity = 0.6 + 0.4 * Math.abs(Math.sin(t * 3));
   birds.forEach((b) => {
     const u = b.userData;
     const a = t * u.sp + u.ph;
