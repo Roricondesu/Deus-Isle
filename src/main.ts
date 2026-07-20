@@ -12,6 +12,7 @@ import {
   envMove,
   animUpdate,
   updateShake,
+  updateTrees,
 } from './environment';
 import { updateParts, smokeUpdate, updateRain } from './particles';
 import { updateCitizens } from './citizens';
@@ -96,6 +97,7 @@ function loop(): void {
     updateLaunch(dt);
     updateRain(dt);
     autoUpgradeTick(gdt);
+    updateTrees(gdt);
   }
   dayNight();
   paletteLerp(dt);

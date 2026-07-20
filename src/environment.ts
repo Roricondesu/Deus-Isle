@@ -227,10 +227,55 @@ export function recolorTerrain(): void {
 
 let natureGroup: THREE.Group | null = null;
 
+/* 树木状态：'tree' 成熟 / 'stump' 砍后树桩 / 'sapling' 再生长中 */
+interface TreeState {
+  g: THREE.Group;       // 整个组的引用（含树干+树叶）
+  leaf: THREE.Object3D; // 叶子对象（用于缩放/隐藏）
+  baseScale: number;
+  x: number;
+  z: number;
+  state: 'tree' | 'stump' | 'sapling';
+  regrowT: number;      // 距下次成长剩余秒数
+  chopCd: number;       // 距下次可被砍伐剩余秒数
+}
+
+const treeStates: TreeState[] = [];
+
+function makeTree(x: number, z: number, h: number): THREE.Group {
+  const t = G();
+  const s = rand(0.7, 1.25);
+  t.add(C(0.09, 0.13, 0.7, 6, 0x7a5a38, { y: 0.35, ol: false }));
+  let leaf: THREE.Object3D;
+  if (Math.random() < 0.5) {
+    leaf = _m(new THREE.IcosahedronGeometry(0.55, 0), 0xffffff, { y: 1.0, ol: false });
+    (leaf as THREE.Mesh).material = leafMat;
+  } else {
+    leaf = CO(0.55, 1.2, 7, 0xffffff, { y: 1.05, ol: false });
+    (leaf as THREE.Mesh).material = leafMat;
+  }
+  t.add(leaf);
+  t.position.set(x, h - 0.05, z);
+  t.scale.setScalar(s);
+  t.rotation.y = rand(6.28);
+  // 记录状态
+  treeStates.push({
+    g: t,
+    leaf,
+    baseScale: s,
+    x,
+    z,
+    state: 'tree',
+    regrowT: 0,
+    chopCd: rand(2, 8),  // 初始随机延迟，避免一起被砍
+  });
+  return t;
+}
+
 function scatterNature(): void {
   if (natureGroup) islandGroup.remove(natureGroup);
   natureGroup = G();
   islandGroup.add(natureGroup);
+  treeStates.length = 0;
   const n = 30 + PATCHES.filter((p) => p.owned).length * 10;
   let placed = 0;
   let tries = 0;
@@ -249,23 +294,7 @@ function scatterNature(): void {
     if (blocked) continue;
     placed++;
     if (Math.random() < 0.78) {
-      // 树
-      const t = G();
-      const s = rand(0.7, 1.25);
-      t.add(C(0.09, 0.13, 0.7, 6, 0x7a5a38, { y: 0.35, ol: false }));
-      if (Math.random() < 0.5) {
-        const leaf = _m(new THREE.IcosahedronGeometry(0.55, 0), 0xffffff, { y: 1.0, ol: false });
-        leaf.material = leafMat;
-        t.add(leaf);
-      } else {
-        const leaf = CO(0.55, 1.2, 7, 0xffffff, { y: 1.05, ol: false });
-        leaf.material = leafMat;
-        t.add(leaf);
-      }
-      t.position.set(x, h - 0.05, z);
-      t.scale.setScalar(s);
-      t.rotation.y = rand(6.28);
-      natureGroup.add(t);
+      natureGroup.add(makeTree(x, z, h));
     } else {
       // 石头
       const r = _m(new THREE.IcosahedronGeometry(rand(0.2, 0.42), 0), 0x9a9a9a, {
@@ -277,6 +306,63 @@ function scatterNature(): void {
       });
       r.material = rockMat;
       natureGroup.add(r);
+    }
+  }
+}
+
+/* 每帧更新树木：被伐木工砍 → 树桩 → 树苗 → 成熟 */
+export function updateTrees(dt: number): void {
+  if (!treeStates.length) return;
+  // 找所有伐木工建筑
+  const woodcutters: { x: number; z: number }[] = [];
+  S.cells.forEach((b) => {
+    if (b.t === 'wood') woodcutters.push({ x: b.g.position.x, z: b.g.position.z });
+  });
+  for (const ts of treeStates) {
+    // 状态机
+    if (ts.state === 'tree') {
+      ts.chopCd -= dt;
+      if (ts.chopCd <= 0 && woodcutters.length) {
+        // 查找最近的伐木工（距离 < 4 才算可达）
+        let nearest: { x: number; z: number } | null = null;
+        let nd = Infinity;
+        for (const w of woodcutters) {
+          const d = Math.hypot(w.x - ts.x, w.z - ts.z);
+          if (d < nd) { nd = d; nearest = w; }
+        }
+        if (nearest && nd < 5) {
+          // 砍伐：变树桩
+          ts.state = 'stump';
+          ts.regrowT = rand(12, 22);  // 12-22 秒后开始再生长
+          ts.leaf.visible = false;
+          // 给玩家加木材
+          S.wood += randi(3, 6);
+        } else {
+          // 没有可达伐木工，重置冷却
+          ts.chopCd = rand(3, 7);
+        }
+      }
+    } else if (ts.state === 'stump') {
+      ts.regrowT -= dt;
+      if (ts.regrowT <= 0) {
+        // 进入树苗阶段
+        ts.state = 'sapling';
+        ts.regrowT = rand(15, 28);  // 15-28 秒长成
+        ts.leaf.visible = true;
+        ts.leaf.scale.setScalar(0.25);
+        ts.g.scale.setScalar(ts.baseScale);
+      }
+    } else if (ts.state === 'sapling') {
+      ts.regrowT -= dt;
+      // 渐进长大：从 0.25 → 1
+      const k = 1 - Math.max(0, ts.regrowT) / 28;
+      const leafScale = 0.25 + 0.75 * clamp(k, 0, 1);
+      ts.leaf.scale.setScalar(leafScale);
+      if (ts.regrowT <= 0) {
+        ts.state = 'tree';
+        ts.chopCd = rand(5, 12);
+        ts.leaf.scale.setScalar(1);
+      }
     }
   }
 }
