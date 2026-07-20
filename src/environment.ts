@@ -139,7 +139,7 @@ function buildTopGrid(cx: number, cz: number, size: number, res: number): THREE.
   const jit = new Float32Array(n);
   for (let i = 0; i < n; i++) {
     const h = landH(pos.getX(i) + cx, pos.getZ(i) + cz);
-    pos.setY(i, h < 0 ? -3.2 : h);
+    pos.setY(i, h < 0 ? -2.3 : h);
     zones[i] = h < 0.55 ? 0 : h > 1.85 ? 2 : 1; // 0 沙滩 1 草地 2 岩石
     jit[i] = rand(0.88, 1.06);
   }
@@ -295,7 +295,7 @@ export function buildIsland(): void {
     (a) => outlineR(a) + 0.2,
     (a) => outlineR(a) * 0.55,
     -0.1,
-    -4.2,
+    -2.3,
     rockMat,
     true,
     true,
@@ -325,7 +325,7 @@ export function buildIsland(): void {
       (a) => patchR(p, a) + 0.2,
       (a) => patchR(p, a) * 0.5,
       -0.1,
-      -3.6,
+      -2.3,
       rockMat,
       true,
       true,
