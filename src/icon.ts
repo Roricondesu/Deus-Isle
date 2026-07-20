@@ -134,7 +134,7 @@ export function icon(name: string, cls?: string): string {
 
 /* 把字符串中的 emoji 替换为对应的 <iconify-icon> */
 const EMOJI_RE =
-  /[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2190}-\u{21FF}\u{2B00}-\u{2BFF}\u{1F1E6}-\u{1F1FF}]/gu;
+  /[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2190}-\u{21FF}\u{2300}-\u{23FF}\u{2B00}-\u{2BFF}\u{1F1E6}-\u{1F1FF}\u{FE0F}]/gu;
 
 export function iconify(text: string): string {
   if (!text) return text;
