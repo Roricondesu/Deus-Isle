@@ -13,13 +13,13 @@ interface RoadStyle {
 }
 
 const ROAD_STYLES: RoadStyle[] = [
-  { color: 0x6a4a2a, width: 0.85, opacity: 0.95 },                  // 远古 - 土路
-  { color: 0xc8b890, width: 0.9, opacity: 0.95 },                   // 古典 - 石板
-  { color: 0x8a7a6a, width: 1.0, opacity: 0.95 },                   // 中世纪 - 鹅卵石
-  { color: 0x9a5a3a, width: 1.1, opacity: 0.95 },                   // 工业 - 砖石
-  { color: 0x3a3a3a, width: 1.3, opacity: 0.95 },                   // 现代 - 沥青
-  { color: 0x35e0e6, width: 1.4, opacity: 0.9, emissive: 0x35e0e6, emissiveIntensity: 0.6 }, // 未来 - 发光
-  { color: 0x8aaaff, width: 1.5, opacity: 0.85, emissive: 0x8aaaff, emissiveIntensity: 0.8 }, // 太空 - 能量
+  { color: 0x6a4a2a, width: 0.45, opacity: 0.95 },                  // 远古 - 土路
+  { color: 0xc8b890, width: 0.48, opacity: 0.95 },                  // 古典 - 石板
+  { color: 0x8a7a6a, width: 0.52, opacity: 0.95 },                  // 中世纪 - 鹅卵石
+  { color: 0x9a5a3a, width: 0.56, opacity: 0.95 },                  // 工业 - 砖石
+  { color: 0x3a3a3a, width: 0.62, opacity: 0.95 },                  // 现代 - 沥青
+  { color: 0x35e0e6, width: 0.66, opacity: 0.9, emissive: 0x35e0e6, emissiveIntensity: 0.6 }, // 未来 - 发光
+  { color: 0x8aaaff, width: 0.7, opacity: 0.85, emissive: 0x8aaaff, emissiveIntensity: 0.8 }, // 太空 - 能量
 ];
 
 let roadGroup: THREE.Group | null = null;
@@ -64,20 +64,37 @@ function buildMST(pts: { x: number; z: number; key: string }[]): [number, number
   return edges;
 }
 
-/** 沿两点之间采样，贴地（landH < 0 时夹到水面附近） */
+/** 沿两点之间采样，贴地 + 加弯曲扰动 */
 function samplePath(
   ax: number, az: number,
   bx: number, bz: number,
   segs: number,
+  seed: number,
 ): THREE.Vector3[] {
   const pts: THREE.Vector3[] = [];
+  const dx = bx - ax;
+  const dz = bz - az;
+  const dist = Math.hypot(dx, dz);
+  if (dist < 1e-4) return [new THREE.Vector3(ax, landH(ax, az) + 0.02, az)];
+  // 路径法向（用于偏移扰动）
+  const nx = -dz / dist;
+  const nz = dx / dist;
+  // 扰动幅度：约距离的 8-15%，让路径有自然弯曲
+  const amp = dist * (0.08 + 0.07 * (0.5 + 0.5 * Math.sin(seed * 2.7)));
   for (let i = 0; i <= segs; i++) {
     const t = i / segs;
-    const x = ax + (bx - ax) * t;
-    const z = az + (bz - az) * t;
+    // 沿主轴
+    const cx = ax + dx * t;
+    const cz = az + dz * t;
+    // 法向偏移：用 sin 在端点为 0，中段最大，并叠加二次扰动
+    const w1 = Math.sin(t * Math.PI) * amp;
+    const w2 = Math.sin(t * Math.PI * 3 + seed) * amp * 0.25;
+    const off = w1 + w2;
+    const x = cx + nx * off;
+    const z = cz + nz * off;
     let h = landH(x, z);
-    if (h < 0.05) h = -0.35; // 水面以上一点（桥面）
-    pts.push(new THREE.Vector3(x, h + 0.06, z));
+    if (h < 0.05) h = -0.3; // 水面以上一点（桥面）
+    pts.push(new THREE.Vector3(x, h + 0.02, z));
   }
   return pts;
 }
@@ -170,13 +187,19 @@ export function rebuildRoads(): void {
     emissive: style.emissive ?? 0x000000,
     emissiveIntensity: style.emissiveIntensity ?? 0,
     depthWrite: false,
+    polygonOffset: true,
+    polygonOffsetFactor: -2,
+    polygonOffsetUnits: -2,
   });
-  for (const [a, b] of edges) {
+  for (let ei = 0; ei < edges.length; ei++) {
+    const [a, b] = edges[ei];
     const pa = pts[a], pb = pts[b];
     const dist = Math.hypot(pa.x - pb.x, pa.z - pb.z);
-    const segs = Math.max(6, Math.ceil(dist / 1.2));
-    const raw = samplePath(pa.x, pa.z, pb.x, pb.z, segs);
-    const smooth = smoothPath(raw, 5);
+    const segs = Math.max(8, Math.ceil(dist / 0.9));
+    // 每条边用独立 seed，保证扰动多样化
+    const seed = (a * 1.37 + b * 2.91 + dist * 0.13) % 100;
+    const raw = samplePath(pa.x, pa.z, pb.x, pb.z, segs, seed);
+    const smooth = smoothPath(raw, 4);
     const ribbon = buildRibbon(smooth, style.width, mat);
     roadGroup.add(ribbon);
   }
