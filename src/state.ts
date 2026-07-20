@@ -128,9 +128,14 @@ export function landH(x: number, z: number): number {
     const dd = Math.hypot(x - px, z - pz),
       aa = Math.atan2(z - pz, x - px),
       pr = patchR(p, aa);
-    if (dd < pr) {
-      const fall = smooth(pr, pr - 3.0, dd);
-      best = Math.max(best, fall * (0.85 + hnoise(x + 40, z - 30) * 0.4));
+    // 扩大 patch 影响范围，使其与主岛边缘重叠融合（+1.5 的过渡区）
+    if (dd < pr + 1.5) {
+      const fall = smooth(pr + 1.5, pr - 2.5, dd);
+      const h = fall * (0.85 + hnoise(x + 40, z - 30) * 0.4);
+      // smooth union：两者接近时取平滑最大值，避免硬边
+      if (h > best) {
+        best = best < 0 ? h : best + (h - best) * smooth(0.2, 0.8, h);
+      }
     }
   }
   return best;

@@ -167,28 +167,33 @@ function ringStrip(
   mat: THREE.Material,
   shadow?: boolean,
   cap?: boolean,
+  // 可选：只画 [aStart, aEnd] 范围的角度（用于 patch 朝海侧）
+  arc?: { start: number; end: number },
 ): THREE.Mesh {
   const N = 64;
+  const aStart = arc ? arc.start : 0;
+  const aEnd = arc ? arc.end : Math.PI * 2;
   const verts: number[] = [];
-  for (let i = 0; i <= N; i++) {
-    const a = (i / N) * Math.PI * 2;
+  // 角度步进
+  const steps = arc ? Math.max(8, Math.ceil((aEnd - aStart) / (Math.PI * 2) * N)) : N;
+  for (let i = 0; i <= steps; i++) {
+    const a = aStart + (aEnd - aStart) * (i / steps);
     verts.push(Math.cos(a) * rTop(a), yTop, Math.sin(a) * rTop(a));
     verts.push(Math.cos(a) * rBot(a), yBot, Math.sin(a) * rBot(a));
   }
   const idx: number[] = [];
-  for (let i = 0; i < N; i++) {
+  for (let i = 0; i < steps; i++) {
     const a = i * 2;
     idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2);
   }
   // 底面封口（避免从下方看到裙摆内部空腔）
-  if (cap) {
+  if (cap && !arc) {
     const base = verts.length / 3;
     for (let i = 0; i <= N; i++) {
       const a = (i / N) * Math.PI * 2;
       verts.push(Math.cos(a) * rBot(a), yBot, Math.sin(a) * rBot(a));
     }
     for (let i = 0; i < N; i++) {
-      // 顺时针缠绕使法线朝下
       idx.push(base + i, base + i + 1, base);
     }
   }
@@ -315,6 +320,7 @@ export function buildIsland(): void {
     const g = buildTopGrid(px, pz, (p.r + 4) * 2, 0.9);
     islandGroup.add(g);
     terrainMeshes.push(g);
+    // 只画朝海侧半圈 foam（远离岛心方向），避免 patch 与主岛之间出现白条
     const fo2 = ringStrip(
       (a) => patchR(p, a) + 0.1,
       (a) => patchR(p, a) + 1.4,
@@ -322,6 +328,9 @@ export function buildIsland(): void {
       -0.05,
       foamMat,
       false,
+      false,
+      // 朝海侧角度范围：以 patch 中心为原点，朝外方向 ±90°
+      { start: p.ang - Math.PI / 2, end: p.ang + Math.PI / 2 },
     );
     fo2.position.set(px, 0, pz);
     scene.add(fo2);
