@@ -40,8 +40,34 @@ export const WIN_MAT = new THREE.MeshBasicMaterial({ color: 0x3a4a5a });
 /* 描边材质 */
 export const OL_MAT = new THREE.MeshBasicMaterial({ color: 0x14141c, side: THREE.BackSide });
 
-/* 全局共享材质：地形 / 草 / 石 / 浪 */
-export const terrainMat = new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: gradTex });
+/* 全局共享材质：地形 / 草 / 石 / 浪
+   岛外顶点 alpha=0 → 在 fragment 中 discard 实现"挖洞" */
+export const terrainMat = new THREE.MeshToonMaterial({
+  vertexColors: true,
+  gradientMap: gradTex,
+  transparent: true,
+});
+terrainMat.onBeforeCompile = (shader) => {
+  // 让 vertex color 的 alpha 传到 fragment
+  shader.vertexShader = shader.vertexShader.replace(
+    '#include <color_pars_vertex>',
+    `#include <color_pars_vertex>
+     varying float vAlpha;`,
+  ).replace(
+    '#include <color_vertex>',
+    `#include <color_vertex>
+     vAlpha = color.a;`,
+  );
+  shader.fragmentShader = shader.fragmentShader.replace(
+    '#include <color_pars_fragment>',
+    `#include <color_pars_fragment>
+     varying float vAlpha;`,
+  ).replace(
+    '#include <color_fragment>',
+    `#include <color_fragment>
+     if (vAlpha < 0.5) discard;`,
+  );
+};
 export const rockMat = new THREE.MeshToonMaterial({ color: 0x8a7f6a, gradientMap: gradTex });
 export const leafMat = new THREE.MeshToonMaterial({ color: 0x4f9e3f, gradientMap: gradTex });
 export const foamMat = new THREE.MeshBasicMaterial({

@@ -134,16 +134,18 @@ function buildTopGrid(cx: number, cz: number, size: number, res: number): THREE.
   geo.rotateX(-Math.PI / 2);
   const pos = geo.attributes.position;
   const n = pos.count;
-  const colors = new Float32Array(n * 3);
+  const colors = new Float32Array(n * 4); // RGBA：岛外 alpha=0
   const zones = new Uint8Array(n);
   const jit = new Float32Array(n);
   for (let i = 0; i < n; i++) {
     const h = landH(pos.getX(i) + cx, pos.getZ(i) + cz);
-    pos.setY(i, h < 0 ? -0.5 : h);
+    const onLand = h > 0;
+    pos.setY(i, onLand ? h : -0.5);
     zones[i] = h < 0.55 ? 0 : h > 1.85 ? 2 : 1; // 0 沙滩 1 草地 2 岩石
     jit[i] = rand(0.88, 1.06);
+    colors[i * 4 + 3] = onLand ? 1 : 0;
   }
-  geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  geo.setAttribute('color', new THREE.BufferAttribute(colors, 4));
   geo.computeVertexNormals();
   const m = new THREE.Mesh(geo, terrainMat);
   m.receiveShadow = true;
@@ -208,7 +210,8 @@ export function recolorTerrain(): void {
     for (let i = 0; i < zones.length; i++) {
       const z = zones[i];
       const j = jit[i];
-      col.setXYZ(i, _zc[z].r * j, _zc[z].g * j, _zc[z].b * j);
+      const a = col.getW(i); // 保留 alpha（岛上=1, 岛外=0）
+      col.setXYZW(i, _zc[z].r * j, _zc[z].g * j, _zc[z].b * j, a);
     }
     col.needsUpdate = true;
   }
