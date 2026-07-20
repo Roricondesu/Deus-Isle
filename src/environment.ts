@@ -400,21 +400,25 @@ for (let i = 0; i < 3; i++) {
 }
 // 灯室
 portGroup.add(C(0.34, 0.3, 0.2, 12, 0x2a2a2a, { y: 1.75 }));
-// 旋转光束（用细长平面 + 旋转 + 加色）
+// 锥形光束（从灯塔顶部向远方海面投射，圆锥朝下）
 const beamMat = new THREE.MeshBasicMaterial({
   color: 0xffe98a,
   transparent: true,
-  opacity: 0.32,
+  opacity: 0,
   blending: THREE.AdditiveBlending,
   depthWrite: false,
   side: THREE.DoubleSide,
   fog: false,
 });
-const beam = new THREE.Mesh(new THREE.PlaneGeometry(20, 1.6), beamMat);
-beam.position.y = 1.75;
+// ConeGeometry(radiusTop, radiusBottom, height, radialSegments)
+// 顶部细（光源处）、底部宽（海面投影处），高度 = 光源到海面距离
+const beam = new THREE.Mesh(new THREE.ConeGeometry(7, 14, 24, 1, true), beamMat);
+// 圆锥默认顶点朝上，翻转使其顶点朝上、底部朝下
+beam.rotation.x = Math.PI;
+beam.position.y = 1.75 + 7; // 顶部位于灯塔灯室，底部深入海面
 portGroup.add(beam);
 // 灯泡
-const lampMat = new THREE.MeshBasicMaterial({ color: 0xffe98a, fog: false });
+const lampMat = new THREE.MeshBasicMaterial({ color: 0xffe98a, fog: false, transparent: true, opacity: 0 });
 const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.14, 10, 8), lampMat);
 lamp.position.y = 1.75;
 portGroup.add(lamp);
@@ -552,9 +556,11 @@ export function envMove(dt: number, t: number): void {
     boat.rotation.y = -ang + Math.PI / 2;
     boat.rotation.z = Math.sin(t * 1.3) * 0.05;
   }
-  // 灯塔光束旋转
+  // 灯塔：只在夜晚亮（dayF<0.5），圆锥光束绕 Y 轴旋转扫海
+  const nightF = 1 - dayF; // 0 白天, 1 夜晚
   beam.rotation.y = t * 1.4;
-  lampMat.opacity = 0.6 + 0.4 * Math.abs(Math.sin(t * 3));
+  beamMat.opacity = nightF * (0.18 + 0.12 * Math.abs(Math.sin(t * 1.4)));
+  lampMat.opacity = nightF * (0.6 + 0.4 * Math.abs(Math.sin(t * 3)));
   birds.forEach((b) => {
     const u = b.userData;
     const a = t * u.sp + u.ph;
