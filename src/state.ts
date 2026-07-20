@@ -116,7 +116,7 @@ export function landH(x: number, z: number): number {
     ro = outlineR(a);
   if (d < ro) {
     const fall = smooth(ro, ro - 2.8, d);
-    best = fall * (0.55 + hnoise(x, z) * 0.45);
+    best = fall * (1.05 + hnoise(x, z) * 0.85);
   }
   for (const p of PATCHES) {
     if (!p.owned) continue;
@@ -127,13 +127,13 @@ export function landH(x: number, z: number): number {
       pr = patchR(p, aa);
     if (dd < pr) {
       const fall = smooth(pr, pr - 2, dd);
-      best = Math.max(best, fall * (0.45 + hnoise(x + 40, z - 30) * 0.25));
+      best = Math.max(best, fall * (0.85 + hnoise(x + 40, z - 30) * 0.4));
     }
   }
   return best;
 }
 
-export const walkable = (x: number, z: number): boolean => landH(x * CELL, z * CELL) > 0.25;
+export const walkable = (x: number, z: number): boolean => landH(x * CELL, z * CELL) > 0.5;
 export const cellY = (x: number, z: number): number => Math.max(0, landH(x * CELL, z * CELL));
 
 export function findCellNear(cx0: number, cz0: number): { x: number; z: number } | null {

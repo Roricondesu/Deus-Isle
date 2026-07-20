@@ -118,7 +118,7 @@ export const waterMat = new THREE.MeshPhongMaterial({
 });
 const water = new THREE.Mesh(waterGeo, waterMat);
 water.rotation.x = -Math.PI / 2;
-water.position.y = -2.2;
+water.position.y = 0;
 water.receiveShadow = true;
 scene.add(water);
 const wBase = waterGeo.attributes.position.array.slice();
@@ -139,7 +139,7 @@ function buildTopGrid(cx: number, cz: number, size: number, res: number): THREE.
   const jit = new Float32Array(n);
   for (let i = 0; i < n; i++) {
     const h = landH(pos.getX(i) + cx, pos.getZ(i) + cz);
-    pos.setY(i, h < 0 ? -2.3 : h);
+    pos.setY(i, h < 0 ? -0.5 : h);
     zones[i] = h < 0.55 ? 0 : h > 1.85 ? 2 : 1; // 0 沙滩 1 草地 2 岩石
     jit[i] = rand(0.88, 1.06);
   }
@@ -291,23 +291,11 @@ export function buildIsland(): void {
   islandGroup.add(main);
   terrainMeshes.push(main);
 
-  const sk = ringStrip(
-    (a) => outlineR(a) + 0.2,
-    (a) => outlineR(a) * 0.55,
-    -0.1,
-    -2.3,
-    rockMat,
-    true,
-    true,
-  );
-  islandGroup.add(sk);
-  skirtMeshes.push(sk);
-
   const fo = ringStrip(
     (a) => outlineR(a) + 0.1,
     (a) => outlineR(a) + 1.5,
-    -1.95,
-    -1.95,
+    -0.05,
+    -0.05,
     foamMat,
     false,
   );
@@ -321,23 +309,11 @@ export function buildIsland(): void {
     const g = buildTopGrid(px, pz, (p.r + 4) * 2, 0.9);
     islandGroup.add(g);
     terrainMeshes.push(g);
-    const sk2 = ringStrip(
-      (a) => patchR(p, a) + 0.2,
-      (a) => patchR(p, a) * 0.5,
-      -0.1,
-      -2.3,
-      rockMat,
-      true,
-      true,
-    );
-    sk2.position.set(px, 0, pz);
-    islandGroup.add(sk2);
-    skirtMeshes.push(sk2);
     const fo2 = ringStrip(
       (a) => patchR(p, a) + 0.1,
       (a) => patchR(p, a) + 1.4,
-      -1.95,
-      -1.95,
+      -0.05,
+      -0.05,
       foamMat,
       false,
     );
