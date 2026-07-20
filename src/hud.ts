@@ -96,7 +96,7 @@ export function refreshHUD(): void {
     eb.innerHTML = icon(IC.target) + ' 取消选择<small style="display:block;font-size:9px;opacity:.75">点击海面任意位置 / Esc</small>';
     eb.disabled = false;
     eb.classList.add('sel');
-  } else if (S.expand >= 3) {
+  } else if (S.expand >= 10) {
     eb.innerHTML = icon(IC.island) + ' 岛屿已达最大';
     eb.disabled = true;
     eb.classList.remove('sel');

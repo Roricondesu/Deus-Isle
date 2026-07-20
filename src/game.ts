@@ -33,6 +33,7 @@ import {
   PAL_T,
   addShake,
   buildIsland,
+  showIslandUnderside,
 } from './environment';
 import { citizens, remeshAllCitizens, type Citizen } from './citizens';
 import { makeBuilding } from './buildings';
@@ -478,6 +479,8 @@ export function startLaunch(): void {
   PAL_T.night.set(0x020310);
   PAL_T.sky.set(0x05081c);
   PAL_T.fog.set(0x05081c);
+  // 显示岛屿底部冰山造型
+  showIslandUnderside();
 }
 
 export function updateLaunch(dt: number): void {
@@ -502,10 +505,11 @@ export function updateLaunch(dt: number): void {
 /* ================= 填海扩岛（手动选择任意位置） ================= */
 const PATCH_RADIUS = 5;
 const PATCH_MIN_DIST = 14;  // 离岛心最小距离（避免压主岛）
-const PATCH_MAX_DIST = 28;  // 离岛心最大距离
+const PATCH_MAX_DIST = 32;  // 离岛心最大距离（10 次扩岛需要更大范围）
+const MAX_EXPAND = 10;      // 最大扩岛次数
 
 export function enterExpandMode(): void {
-  if (S.expand >= 3 || S.transitioning || S.over) return;
+  if (S.expand >= MAX_EXPAND || S.transitioning || S.over) return;
   if (S.expandMode) {
     cancelExpandMode();
     return;
@@ -545,7 +549,7 @@ export function isValidExpandPos(x: number, z: number): boolean {
 }
 
 export function confirmExpandAt(x: number, z: number): void {
-  if (!S.expandMode || S.expand >= 3) {
+  if (!S.expandMode || S.expand >= MAX_EXPAND) {
     cancelExpandMode();
     return;
   }

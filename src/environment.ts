@@ -109,6 +109,114 @@ scene.add(world);
 export const islandGroup = new THREE.Group();
 world.add(islandGroup);
 
+/* ================= 起飞底部冰山建模（升空时才显示） ================= */
+let undersideGroup: THREE.Group | null = null;
+
+/** 生成岛屿底部冰山/岩石造型，挂在 islandGroup 下 */
+export function buildIslandUnderside(): THREE.Group {
+  if (undersideGroup) return undersideGroup;
+  const g = new THREE.Group();
+  // 主锥体：从 y=-1（贴近水面）到 y=-22（深处尖锐）
+  const baseR = R() + 4;  // 略大于岛屿半径
+  const height = 22;
+  const geo = new THREE.ConeGeometry(baseR, height, 24, 8, false);
+  geo.translate(0, -height / 2 - 0.5, 0); // 锥顶朝下
+  // 顶点扰动 + 颜色分层
+  const pos = geo.attributes.position;
+  const colors = new Float32Array(pos.count * 3);
+  const cTop = new THREE.Color(0x6a8aaa);     // 冰蓝（近水面）
+  const cMid = new THREE.Color(0x4a5a6a);     // 岩石蓝
+  const cBot = new THREE.Color(0x2a2a3a);     // 深岩
+  const tmp = new THREE.Color();
+  for (let i = 0; i < pos.count; i++) {
+    const x = pos.getX(i);
+    const y = pos.getY(i);
+    const z = pos.getZ(i);
+    // 距中心越远扰动越大，形成不规则冰山
+    const r = Math.hypot(x, z);
+    const n = hnoise(x * 0.3, z * 0.3) * 0.5 + hnoise(x * 0.8 + 10, z * 0.8) * 0.3;
+    const jit = n * (r * 0.4 + 1);
+    // 顶点向内/外偏移（保持锥形轮廓）
+    const angle = Math.atan2(z, x);
+    const nx = Math.cos(angle) * jit;
+    const nz = Math.sin(angle) * jit;
+    pos.setX(i, x + nx);
+    pos.setZ(i, z + nz);
+    // 下沉的顶点 y 也加噪声
+    pos.setY(i, y + n * 0.6);
+    // 颜色：从上到下渐变
+    const t = clamp((-y) / height, 0, 1);
+    if (t < 0.4) {
+      tmp.copy(cTop).lerp(cMid, t / 0.4);
+    } else {
+      tmp.copy(cMid).lerp(cBot, (t - 0.4) / 0.6);
+    }
+    colors[i * 3] = tmp.r;
+    colors[i * 3 + 1] = tmp.g;
+    colors[i * 3 + 2] = tmp.b;
+  }
+  geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  geo.computeVertexNormals();
+  const mat = new THREE.MeshStandardMaterial({
+    vertexColors: true,
+    roughness: 0.7,
+    metalness: 0.1,
+    flatShading: true,
+  });
+  const cone = new THREE.Mesh(geo, mat);
+  cone.castShadow = true;
+  cone.receiveShadow = true;
+  g.add(cone);
+
+  // 悬挂冰柱（从锥体侧面伸出，模拟融化的冰）
+  const icicleMat = new THREE.MeshStandardMaterial({
+    color: 0xb8d8f0,
+    roughness: 0.3,
+    metalness: 0.05,
+    transparent: true,
+    opacity: 0.85,
+  });
+  for (let i = 0; i < 18; i++) {
+    const a = (i / 18) * Math.PI * 2 + rand(-0.2, 0.2);
+    const r = baseR * rand(0.5, 0.95);
+    const x = Math.cos(a) * r;
+    const z = Math.sin(a) * r;
+    // 找到该位置锥体的 y（大致估算）
+    const y = -height * (r / baseR) - 0.5;
+    const len = rand(0.6, 1.8);
+    const icicle = new THREE.Mesh(
+      new THREE.ConeGeometry(0.15, len, 6, 1, false),
+      icicleMat,
+    );
+    icicle.position.set(x, y - len * 0.5, z);
+    icicle.rotation.x = rand(-0.2, 0.2);
+    icicle.rotation.z = rand(-0.2, 0.2);
+    g.add(icicle);
+  }
+
+  // 底部发光核心（神秘能量感）
+  const coreMat = new THREE.MeshBasicMaterial({
+    color: 0x6ad0ff,
+    transparent: true,
+    opacity: 0.7,
+    fog: false,
+  });
+  const core = new THREE.Mesh(new THREE.SphereGeometry(1.5, 12, 8), coreMat);
+  core.position.set(0, -height - 1, 0);
+  g.add(core);
+
+  g.visible = false; // 默认隐藏，起飞时显示
+  islandGroup.add(g);
+  undersideGroup = g;
+  return g;
+}
+
+/** 起飞时显示底部冰山 */
+export function showIslandUnderside(): void {
+  const g = buildIslandUnderside();
+  g.visible = true;
+}
+
 /* ================= 海 ================= */
 const waterGeo = new THREE.PlaneGeometry(420, 420, 72, 72);
 export const waterMat = new THREE.MeshPhongMaterial({

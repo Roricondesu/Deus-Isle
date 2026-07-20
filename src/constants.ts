@@ -65,7 +65,18 @@ export const wonderCost = (e: number): [number, number, number] =>
 export const eraReq = (e: number): { pop: number; gold: number } =>
   ({ pop: 8 + e * 7, gold: 50 + e * 45 });
 
-export const EXPAND_COST: [number, number][] = [[80, 60], [150, 120], [250, 200]];
+export const EXPAND_COST: [number, number][] = [
+  [80, 60],
+  [150, 120],
+  [250, 200],
+  [380, 300],
+  [540, 420],
+  [740, 560],
+  [980, 720],
+  [1260, 900],
+  [1580, 1100],
+  [1940, 1320],
+];
 
 /* 市民服装颜色 */
 export const CIT_COL = [0x9a6a42, 0xe8e0d0, 0x4a5a8a, 0x5a5a62, 0x3a6ab8, 0xe8f0f8, 0xf0f4ff];
