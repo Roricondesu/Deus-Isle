@@ -184,8 +184,11 @@ function buildRibbon(path: PathSeg[], width: number, mat: THREE.Material): THREE
   geo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
   geo.setIndex(idx);
   geo.computeVertexNormals();
+  geo.computeBoundingSphere();
   const mesh = new THREE.Mesh(geo, mat);
   mesh.receiveShadow = true;
+  // 不剔除：路径细长，bounding sphere 易误判出视锥导致闪烁
+  mesh.frustumCulled = false;
   return mesh;
 }
 
@@ -332,7 +335,7 @@ export function rebuildRoads(): void {
     metalness: 0.05,
     emissive: style.emissive ?? 0x000000,
     emissiveIntensity: style.emissiveIntensity ?? 0,
-    depthWrite: false,
+    depthWrite: true,
     polygonOffset: true,
     polygonOffsetFactor: -2,
     polygonOffsetUnits: -2,
