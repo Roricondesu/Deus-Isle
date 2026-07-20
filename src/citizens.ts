@@ -2,13 +2,35 @@ import * as THREE from 'three';
 import { B, C, CO, SP, G, _m } from './materials';
 import { CIT_COL } from './constants';
 import { rand, pick, lerp } from './utils';
-import { S, landH } from './state';
+import { S, R, landH, outlineR, patchR, PATCHES } from './state';
 import { islandGroup } from './environment';
 
-/* 桥面高度：跨水时市民走这个高度，视觉上像在桥上行走 */
-const BRIDGE_Y = 0.5;
 /* 最远采样半径：覆盖到最远的 patch（PATCH_MAX_DIST=32） */
 const MAX_WALK_R = 30;
+
+/** 判断 (x,z) 当前所在的岛：主岛 or 某个 patch
+ *  返回该岛中心和采样半径，null 表示在水面上（不应发生） */
+function currentIsland(x: number, z: number): { cx: number; cz: number; r: number } | null {
+  const d = Math.hypot(x, z);
+  const a = Math.atan2(z, x);
+  if (d < outlineR(a)) return { cx: 0, cz: 0, r: R() * 0.85 };
+  for (const p of PATCHES) {
+    if (!p.owned) continue;
+    const px = Math.cos(p.ang) * p.dist;
+    const pz = Math.sin(p.ang) * p.dist;
+    const dd = Math.hypot(x - px, z - pz);
+    const aa = Math.atan2(z - pz, x - px);
+    if (dd < patchR(p, aa)) return { cx: px, cz: pz, r: p.r * 0.85 };
+  }
+  return null;
+}
+
+/** 判断建筑是否在指定岛上 */
+function buildingOnIsland(bx: number, bz: number, island: { cx: number; cz: number }): boolean {
+  const bi = currentIsland(bx, bz);
+  if (!bi) return false;
+  return Math.hypot(bi.cx - island.cx, bi.cz - island.cz) < 0.5;
+}
 
 /* ================= 市民 ================= */
 export interface Citizen {
@@ -73,7 +95,7 @@ export function spawnCitizen(x?: number, z?: number): Citizen {
     z = z ?? 0;
   }
   const g = makeCitizenMesh(S.era);
-  g.position.set(x, Math.max(landH(x, z), BRIDGE_Y), z);
+  g.position.set(x, landH(x, z), z);
   islandGroup.add(g);
   const c: Citizen = {
     g,
@@ -88,34 +110,44 @@ export function spawnCitizen(x?: number, z?: number): Citizen {
   return c;
 }
 
-/** 选下一个目标：
- *  - 60% 概率：以某栋建筑（含 patch 上的）为目标
- *  - 40% 概率：在主岛 + patches 范围内随机采样
- *  跨水目标也允许（市民会沿桥走过去） */
+/** 选下一个目标：仅在当前所在岛（主岛或某 patch）内选，绝不跨水
+ *  - 50% 概率：以当前岛上的某栋建筑为目标
+ *  - 50% 概率：在当前岛范围内随机采样陆地 */
 export function newTarget(c: Citizen): void {
-  // 60% 概率挑建筑作为目标
-  if (S.cells.size > 0 && Math.random() < 0.6) {
-    const arr = Array.from(S.cells.values());
-    const b = pick(arr);
-    c.tx = b.g.position.x + rand(-0.6, 0.6);
-    c.tz = b.g.position.z + rand(-0.6, 0.6);
+  const island = currentIsland(c.g.position.x, c.g.position.z);
+  if (!island) {
+    // 异常情况：市民在水面上 → 回主岛中心
+    c.tx = 0;
+    c.tz = 0;
     return;
   }
-  // 40% 概率在大范围内随机采样
+  // 50% 概率挑当前岛上的建筑作为目标
+  if (S.cells.size > 0 && Math.random() < 0.5) {
+    const arr = Array.from(S.cells.values()).filter((b) =>
+      buildingOnIsland(b.g.position.x, b.g.position.z, island),
+    );
+    if (arr.length > 0) {
+      const b = pick(arr);
+      c.tx = b.g.position.x + rand(-0.6, 0.6);
+      c.tz = b.g.position.z + rand(-0.6, 0.6);
+      return;
+    }
+  }
+  // 50% 概率在当前岛内随机采样
   for (let i = 0; i < 10; i++) {
     const a = rand(Math.PI * 2);
-    const d = rand(2, MAX_WALK_R);
-    const x = Math.cos(a) * d;
-    const z = Math.sin(a) * d;
+    const d = rand(1, island.r);
+    const x = island.cx + Math.cos(a) * d;
+    const z = island.cz + Math.sin(a) * d;
     if (landH(x, z) > 0.55) {
       c.tx = x;
       c.tz = z;
       return;
     }
   }
-  // 都失败 → 回主岛中心
-  c.tx = 0;
-  c.tz = 0;
+  // 都失败 → 回岛中心
+  c.tx = island.cx;
+  c.tz = island.cz;
 }
 
 export function updateCitizens(dt: number, t: number): void {
@@ -135,24 +167,18 @@ export function updateCitizens(dt: number, t: number): void {
         c.state = 'idle';
         c.t = rand(1.5, 4);
       } else {
-        // 跨水时减速（走桥要慢一点）
-        const onWater = landH(g.position.x, g.position.z) < 0.05;
-        const speedScale = onWater ? 0.7 : 1;
-        const v = c.sp * speedScale * dt;
+        const v = c.sp * dt;
         g.position.x += (dx / d) * v;
         g.position.z += (dz / d) * v;
         g.rotation.y = Math.atan2(dx, dz);
-        // y 高度：陆地走陆地，水面走桥面高度（视觉上沿桥行走）
-        const groundY = landH(g.position.x, g.position.z);
-        g.position.y = Math.max(groundY, BRIDGE_Y) + Math.abs(Math.sin(t * 9 + c.ph)) * 0.07;
+        g.position.y = landH(g.position.x, g.position.z) + Math.abs(Math.sin(t * 9 + c.ph)) * 0.07;
         const [aL, aR] = g.userData.arms as THREE.Mesh[];
         aL.rotation.x = Math.sin(t * 9 + c.ph) * 0.6;
         aR.rotation.x = -Math.sin(t * 9 + c.ph) * 0.6;
       }
     } else if (c.state === 'idle') {
       c.t -= dt;
-      const groundY = landH(g.position.x, g.position.z);
-      g.position.y = Math.max(groundY, BRIDGE_Y);
+      g.position.y = landH(g.position.x, g.position.z);
       const [aL, aR] = g.userData.arms as THREE.Mesh[];
       aL.rotation.x *= 0.9;
       aR.rotation.x *= 0.9;
