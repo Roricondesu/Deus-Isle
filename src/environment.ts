@@ -366,41 +366,46 @@ scene.add(boat);
 
 /* ================= 港口：码头 + 灯塔（带旋转光带 + 闪烁灯） ================= */
 export const portGroup = G();
-// 找一个岛外缘的角度作为港口位置
-const portAng = SEED % (Math.PI * 2);
-const portX = Math.cos(portAng) * (R() - 1);
-const portZ = Math.sin(portAng) * (R() - 1);
+// 港口位置：贴着岛外缘（outlineR 处），灯塔在岸上、码头伸向海面
+const portAng = (SEED % 1) * Math.PI * 2;
+const portR = outlineR(portAng) - 0.5; // 岛岸内侧一点点
+const portX = Math.cos(portAng) * portR;
+const portZ = Math.sin(portAng) * portR;
 portGroup.position.set(portX, 0, portZ);
+// +X 方向指向岛外（海面）
 portGroup.rotation.y = -portAng + Math.PI / 2;
 islandGroup.add(portGroup);
 
-// 码头平台
-const dock = B(2.4, 0.18, 1.2, 0xb88a5a, { y: 0.15, x: 1.6, ol: false });
+// 码头平台（向岛外延伸，从 x=0.5 到 x=2.9）
+const dock = B(2.4, 0.18, 1.2, 0xb88a5a, { y: -0.2, x: 1.7, ol: false });
 portGroup.add(dock);
 // 码头支柱
 for (const [px, pz] of [
-  [0.6, -0.45],
-  [0.6, 0.45],
-  [2.6, -0.45],
-  [2.6, 0.45],
+  [0.7, -0.45],
+  [0.7, 0.45],
+  [2.7, -0.45],
+  [2.7, 0.45],
 ] as [number, number][]) {
-  portGroup.add(C(0.08, 0.08, 1.0, 6, 0x6a4a2a, { x: px, y: -0.3, z: pz, ol: false }));
+  portGroup.add(C(0.08, 0.08, 1.0, 6, 0x6a4a2a, { x: px, y: -0.65, z: pz, ol: false }));
 }
 // 系缆桩
-portGroup.add(C(0.1, 0.18, 0.1, 8, 0x4a3a2a, { x: 0.7, y: 0.32, z: -0.4, ol: false }));
-portGroup.add(C(0.1, 0.18, 0.1, 8, 0x4a3a2a, { x: 0.7, y: 0.32, z: 0.4, ol: false }));
+portGroup.add(C(0.1, 0.18, 0.1, 8, 0x4a3a2a, { x: 0.8, y: -0.02, z: -0.4, ol: false }));
+portGroup.add(C(0.1, 0.18, 0.1, 8, 0x4a3a2a, { x: 0.8, y: -0.02, z: 0.4, ol: false }));
 
-// 灯塔基座
-portGroup.add(B(0.8, 0.2, 0.8, 0x8a8a8a, { y: 0.1 }));
+// 灯塔基座（位置在 x=0，岛岸上）
+const baseY = 0; // 岛岸高度，大致贴近地面
+portGroup.add(B(0.8, 0.2, 0.8, 0x8a8a8a, { x: 0, y: baseY + 0.1 }));
 // 塔身（红白条纹）
-const tower = C(0.32, 0.36, 1.4, 12, 0xf0e8d8, { y: 0.95 });
+const tower = C(0.32, 0.36, 1.4, 12, 0xf0e8d8, { x: 0, y: baseY + 0.95 });
 portGroup.add(tower);
 for (let i = 0; i < 3; i++) {
-  portGroup.add(C(0.33, 0.37, 0.12, 12, 0xd04a3a, { y: 0.45 + i * 0.45, ol: false }));
+  portGroup.add(C(0.33, 0.37, 0.12, 12, 0xd04a3a, { x: 0, y: baseY + 0.45 + i * 0.45, ol: false }));
 }
 // 灯室
-portGroup.add(C(0.34, 0.3, 0.2, 12, 0x2a2a2a, { y: 1.75 }));
-// 锥形光束（从灯塔顶部向远方海面投射，圆锥朝下）
+const lampY = baseY + 1.75;
+portGroup.add(C(0.34, 0.3, 0.2, 12, 0x2a2a2a, { x: 0, y: lampY }));
+// 锥形光束：父 Group 绕灯塔 Y 轴旋转扫海，beam 自身朝外倾斜
+const beamHeight = lampY + 8;
 const beamMat = new THREE.MeshBasicMaterial({
   color: 0xffe98a,
   transparent: true,
@@ -410,17 +415,22 @@ const beamMat = new THREE.MeshBasicMaterial({
   side: THREE.DoubleSide,
   fog: false,
 });
-// ConeGeometry(radiusTop, radiusBottom, height, radialSegments)
-// 顶部细（光源处）、底部宽（海面投影处），高度 = 光源到海面距离
-const beam = new THREE.Mesh(new THREE.ConeGeometry(7, 14, 24, 1, true), beamMat);
-// 圆锥默认顶点朝上，翻转使其顶点朝上、底部朝下
-beam.rotation.x = Math.PI;
-beam.position.y = 1.75 + 7; // 顶部位于灯塔灯室，底部深入海面
-portGroup.add(beam);
+const beamPivot = new THREE.Group();
+beamPivot.position.set(0, lampY, 0);
+portGroup.add(beamPivot);
+const beam = new THREE.Mesh(
+  new THREE.CylinderGeometry(0.1, 6, beamHeight, 24, 1, true),
+  beamMat,
+);
+// radiusTop=0 是顶点，在 +Y 侧；底面在 -Y 侧
+// 绕 Z 轴倾斜 ~55°，让顶点保持在灯室、底面落到岛外海面
+beam.rotation.z = Math.PI * 0.3;
+beam.position.set(0, -beamHeight / 2, 0);
+beamPivot.add(beam);
 // 灯泡
 const lampMat = new THREE.MeshBasicMaterial({ color: 0xffe98a, fog: false, transparent: true, opacity: 0 });
 const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.14, 10, 8), lampMat);
-lamp.position.y = 1.75;
+lamp.position.set(0, lampY, 0);
 portGroup.add(lamp);
 
 const birds: THREE.Group[] = [];
@@ -558,8 +568,8 @@ export function envMove(dt: number, t: number): void {
   }
   // 灯塔：只在夜晚亮（dayF<0.5），圆锥光束绕 Y 轴旋转扫海
   const nightF = 1 - dayF; // 0 白天, 1 夜晚
-  beam.rotation.y = t * 1.4;
-  beamMat.opacity = nightF * (0.18 + 0.12 * Math.abs(Math.sin(t * 1.4)));
+  beamPivot.rotation.y = t * 1.0; // 缓慢扫海
+  beamMat.opacity = nightF * (0.22 + 0.12 * Math.abs(Math.sin(t * 1.0)));
   lampMat.opacity = nightF * (0.6 + 0.4 * Math.abs(Math.sin(t * 3)));
   birds.forEach((b) => {
     const u = b.userData;
