@@ -1,4 +1,4 @@
-import { S } from './state';
+import { S, SEED, PATCHES, setSeed, setPatches, type Patch } from './state';
 import { setPaletteSync } from './environment';
 import { buildIsland } from './environment';
 import { placeBuilding } from './interaction';
@@ -19,6 +19,8 @@ interface SaveData {
   playTime: number;
   wonders: Record<number, boolean>;
   cells: { x: number; z: number; t: string; e: number; r: 0 | 1 }[];
+  seed: number;
+  patches: Patch[];
 }
 
 export function saveGame(): void {
@@ -41,6 +43,8 @@ export function saveGame(): void {
     playTime: S.playTime,
     wonders: S.wonders,
     cells,
+    seed: SEED,
+    patches: PATCHES.map((p) => ({ ...p })),
   };
   localStorage.setItem(SAVE_KEY, JSON.stringify(data));
 }
@@ -63,6 +67,9 @@ export function loadGame(): boolean {
       playTime: d.playTime || 0,
     });
     S.wonders = d.wonders || {};
+    // 还原地形种子和填海地块
+    if (typeof d.seed === 'number') setSeed(d.seed);
+    if (Array.isArray(d.patches)) setPatches(d.patches.map((p) => ({ ...p })));
     setPaletteSync(S.era);
     buildIsland();
     d.cells.forEach((c) => placeBuilding(c.t, c.e, c.x, c.z, !!c.r));

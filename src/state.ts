@@ -80,6 +80,16 @@ export function addPatch(x: number, z: number, r: number = 5): Patch {
   return p;
 }
 
+/** 还原存档时设置种子 */
+export function setSeed(s: number): void {
+  SEED = s;
+}
+
+/** 还原存档时设置 patches 列表 */
+export function setPatches(patches: Patch[]): void {
+  PATCHES = patches;
+}
+
 export function reseed(newSeed?: number): void {
   SEED = newSeed ?? rand(1000);
   initPatches();
