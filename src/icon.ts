@@ -21,8 +21,8 @@ export const IC = {
   reset: 'mdi:reload',
   // 时代
   eraFire: 'mdi:fire',
-  eraAmphora: 'fla:amphora',
-  eraLantern: 'fla:lantern',
+  eraAmphora: 'mdi:grave-stone',
+  eraLantern: 'mdi:lightbulb',
   eraFactory: 'mdi:factory',
   eraCity: 'mdi:city',
   eraGlobe: 'mdi:web',
@@ -32,7 +32,7 @@ export const IC = {
   farm: 'mdi:wheat',
   woodcutter: 'ph:tree-fill',
   market: 'mdi:store',
-  temple: 'fla:torii',
+  temple: 'mdi:candle',
   park: 'mdi:tree',
   wonder: 'mdi:bank',
   // 神迹
@@ -45,7 +45,7 @@ export const IC = {
   meteorShower: 'mdi:weather-night',
   fish: 'mdi:fish',
   eagle: 'mdi:bird',
-  volcano: 'fla:volcano',
+  volcano: 'mdi:triangle',
   star: 'mdi:star',
   camera: 'mdi:camera',
   baby: 'mdi:baby',
