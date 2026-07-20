@@ -24,6 +24,13 @@ import { camera } from './environment';
 import { castGod } from './game';
 import { startLaunch } from './game';
 import { iconify, icon, IC } from './icon';
+import {
+  listManualSaves,
+  saveToSlot,
+  loadFromSlot,
+  deleteSlot,
+  SAVE_SLOTS,
+} from './save';
 
 /* ================= 屏幕坐标投影 / 飘字 / Toast ================= */
 export function toScreen(v: THREE.Vector3): { x: number; y: number } {
@@ -210,4 +217,105 @@ export function showVictory(): void {
     )
     .join('');
   $('overlay-victory').classList.remove('hidden');
+}
+
+/* ================= 存档/读档面板 ================= */
+
+function fmtTime(ts: number): string {
+  const d = new Date(ts);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function fmtPlayTime(sec: number): string {
+  const m = Math.floor(sec / 60);
+  const h = Math.floor(m / 60);
+  if (h > 0) return `${h}小时${m % 60}分`;
+  return `${m}分`;
+}
+
+export function renderSavePanel(): void {
+  const slots = listManualSaves();
+  const container = $('save-slots');
+  container.innerHTML = '';
+  for (let i = 0; i < SAVE_SLOTS; i++) {
+    const data = slots[i];
+    const el = document.createElement('div');
+    el.className = 'save-slot' + (data ? '' : ' empty');
+    if (data) {
+      const eraName = ERAS[data.era]?.name || '未知';
+      el.innerHTML = `
+        <div class="save-slot-info">
+          <div class="save-slot-name">槽位 ${i + 1} · ${eraName}</div>
+          <div class="save-slot-meta">
+            ${icon(IC.pop)} ${data.pop}人 ·
+            ${icon(IC.gold)} ${Math.floor(data.gold)} ·
+            ${icon(IC.wonder)} ${Object.keys(data.wonders || {}).length}奇观 ·
+            ${fmtPlayTime(data.playTime || 0)} ·
+            ${fmtTime(data.savedAt || 0)}
+          </div>
+        </div>
+        <div class="save-slot-actions">
+          <button class="save-slot-btn load" data-act="load" data-slot="${i}">读取</button>
+          <button class="save-slot-btn save" data-act="save" data-slot="${i}">覆盖</button>
+          <button class="save-slot-btn delete" data-act="delete" data-slot="${i}">删除</button>
+        </div>
+      `;
+    } else {
+      el.innerHTML = `
+        <div class="save-slot-info">
+          <div class="save-slot-name">槽位 ${i + 1} · 空闲</div>
+          <div class="save-slot-meta">尚未保存</div>
+        </div>
+        <div class="save-slot-actions">
+          <button class="save-slot-btn save" data-act="save" data-slot="${i}">保存</button>
+        </div>
+      `;
+    }
+    container.appendChild(el);
+  }
+  // 绑定按钮事件
+  container.querySelectorAll<HTMLElement>('[data-act]').forEach((btn) => {
+    btn.onclick = () => {
+      const act = btn.dataset.act;
+      const slot = parseInt(btn.dataset.slot || '0', 10);
+      if (act === 'save') {
+        if (saveToSlot(slot)) {
+          sfx.build();
+          toast('已保存到槽位 ' + (slot + 1), IC.check);
+          renderSavePanel();
+        } else {
+          sfx.error();
+          toast('保存失败', IC.warning);
+        }
+      } else if (act === 'load') {
+        if (loadFromSlot(slot)) {
+          sfx.faith();
+          toast('已读取槽位 ' + (slot + 1), IC.check);
+          hideSavePanel();
+          refreshHUD();
+          renderDock();
+          updateEraBadge();
+        } else {
+          sfx.error();
+          toast('读取失败', IC.warning);
+        }
+      } else if (act === 'delete') {
+        if (confirm('确定删除槽位 ' + (slot + 1) + ' 的存档？')) {
+          deleteSlot(slot);
+          sfx.click();
+          renderSavePanel();
+        }
+      }
+    };
+  });
+}
+
+export function showSavePanel(): void {
+  renderSavePanel();
+  $('save-panel').classList.remove('hidden');
+}
+
+export function hideSavePanel(): void {
+  $('save-panel').classList.add('hidden');
 }

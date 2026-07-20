@@ -160,6 +160,37 @@
     text-shadow:0 0 60px rgba(140,200,255,.9); }
   #era-anim-sub { font-size:16px; color:#9fd0ff; letter-spacing:10px; margin-top:14px; }
 
+  /* 存档/读档面板 */
+  #save-panel { position:fixed; inset:0; background:rgba(8,14,30,.65); backdrop-filter:blur(8px);
+    z-index:60; display:flex; align-items:center; justify-content:center; }
+  #save-panel.hidden { display:none; }
+  .save-panel-inner { width:min(560px,92vw); background:rgba(28,38,68,.92); border:1px solid rgba(140,200,255,.3);
+    border-radius:18px; padding:24px; box-shadow:0 24px 60px rgba(0,0,0,.5); }
+  .save-panel-title { display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;
+    font-size:18px; letter-spacing:4px; color:#cfe2ff; font-weight:700; }
+  .save-panel-title iconify-icon { color:#8ad0ff; margin-right:8px; vertical-align:-0.15em; }
+  #save-slots { display:flex; flex-direction:column; gap:12px; }
+  .save-slot { display:flex; align-items:center; justify-content:space-between; gap:14px;
+    padding:14px 16px; background:rgba(20,28,50,.7); border:1px solid rgba(140,200,255,.15);
+    border-radius:10px; transition:all .2s; }
+  .save-slot:hover { border-color:rgba(140,200,255,.4); background:rgba(30,42,72,.8); }
+  .save-slot-info { flex:1; min-width:0; }
+  .save-slot-name { font-size:15px; color:#e8f0ff; font-weight:600; letter-spacing:1px; }
+  .save-slot-meta { font-size:11px; color:rgba(200,220,255,.55); margin-top:4px; letter-spacing:.5px; }
+  .save-slot-meta iconify-icon { width:11px; height:11px; vertical-align:-0.1em; margin-right:2px; }
+  .save-slot.empty .save-slot-name { color:rgba(200,220,255,.35); }
+  .save-slot-actions { display:flex; gap:8px; }
+  .save-slot-btn { padding:6px 12px; font-size:12px; border-radius:6px; border:none; cursor:pointer;
+    font-family:inherit; letter-spacing:1px; transition:all .15s; }
+  .save-slot-btn.save { background:linear-gradient(135deg,#8affc1,#3cd6a0); color:#0a2014; font-weight:600; }
+  .save-slot-btn.save:hover { transform:translateY(-1px); box-shadow:0 4px 12px rgba(60,214,160,.4); }
+  .save-slot-btn.load { background:rgba(140,200,255,.2); color:#cfe2ff; border:1px solid rgba(140,200,255,.4); }
+  .save-slot-btn.load:hover { background:rgba(140,200,255,.3); }
+  .save-slot-btn.delete { background:transparent; color:rgba(255,140,140,.7); border:1px solid rgba(255,140,140,.3); }
+  .save-slot-btn.delete:hover { background:rgba(255,140,140,.15); color:#ffaaaa; }
+  .save-slot-btn:disabled { opacity:.35; cursor:not-allowed; }
+  .save-hint { margin-top:16px; font-size:11px; color:rgba(200,220,255,.45); letter-spacing:.5px; text-align:center; }
+
   #overlay-victory h1 { font-size:min(52px,9vw); color:#ffd0d0; letter-spacing:10px; font-weight:900;
     text-shadow:0 0 50px rgba(255,120,120,.8); display:flex; align-items:center; }
   #v-stats { display:flex; gap:26px; margin:30px 0 34px; flex-wrap:wrap; justify-content:center; }
@@ -199,7 +230,20 @@
     <div class="res" title="幸福度"><iconify-icon icon="mdi:emoticon-happy"></iconify-icon><span id="r-happy">0</span></div>
     <div id="clock" title="昼夜"><iconify-icon icon="mdi:weather-sunny"></iconify-icon></div>
     <button class="icon-btn" id="btn-mute" title="音效开关"><iconify-icon icon="mdi:volume-high"></iconify-icon></button>
+    <button class="icon-btn" id="btn-save" title="存档/读档"><iconify-icon icon="mdi:content-save-all"></iconify-icon></button>
     <button class="icon-btn" id="btn-reset" title="重置存档"><iconify-icon icon="mdi:reload"></iconify-icon></button>
+  </div>
+
+  <!-- 存档/读档面板 -->
+  <div id="save-panel" class="hidden">
+    <div class="save-panel-inner">
+      <div class="save-panel-title">
+        <span><iconify-icon icon="mdi:content-save-all"></iconify-icon> 存档 / 读档</span>
+        <button id="save-panel-close" class="icon-btn"><iconify-icon icon="mdi:close"></iconify-icon></button>
+      </div>
+      <div id="save-slots"></div>
+      <div class="save-hint">自动存档会在每次操作后更新；手动档可保存 3 个独立进度。</div>
+    </div>
   </div>
 
   <div id="toasts"></div>

@@ -28,7 +28,7 @@ import {
   enterExpandMode,
   autoUpgradeTick,
 } from './game';
-import { refreshHUD, renderDock, updateGodDock, toast, updateEraBadge } from './hud';
+import { refreshHUD, renderDock, updateGodDock, toast, updateEraBadge, showSavePanel, hideSavePanel } from './hud';
 import { saveGame, loadGame, clearSave } from './save';
 import { S } from './state';
 import { setupAudioToggle, unlockAudio, sfx } from './audio';
@@ -124,6 +124,22 @@ function bindButtons(): void {
       location.reload();
     }
   };
+
+  // 存档/读档面板
+  $('btn-save').onclick = () => {
+    showSavePanel();
+  };
+  $('save-panel-close').onclick = () => {
+    hideSavePanel();
+  };
+  // 点击面板背景关闭
+  $('save-panel').onclick = (e) => {
+    if (e.target === $('save-panel')) hideSavePanel();
+  };
+  // Esc 关闭面板
+  addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') hideSavePanel();
+  });
 
   // 时代跃迁
   ($('btn-eraup') as HTMLButtonElement).onclick = () => eraUp();
