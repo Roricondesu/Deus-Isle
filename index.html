@@ -1,0 +1,1299 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>神明小岛 · Deus Isle</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { width:100%; height:100%; overflow:hidden; background:#0a0e1a;
+    font-family:"PingFang SC","Microsoft YaHei","Source Han Sans SC",system-ui,sans-serif;
+    user-select:none; -webkit-user-select:none; }
+  #stage { position:fixed; inset:0; }
+  #stage canvas { display:block; }
+
+  /* ---------- HUD 通用 ---------- */
+  #ui { position:fixed; inset:0; pointer-events:none; z-index:10; }
+  #ui > * { pointer-events:auto; }
+  .glass { background:rgba(12,16,32,.62); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+    border:1px solid rgba(255,255,255,.12); border-radius:16px;
+    box-shadow:0 8px 32px rgba(0,0,0,.35); }
+
+  /* ---------- 顶栏 ---------- */
+  #topbar { position:absolute; top:12px; left:50%; transform:translateX(-50%);
+    display:flex; align-items:center; gap:10px; padding:8px 14px; max-width:96vw; flex-wrap:wrap; justify-content:center; }
+  #era-badge { display:flex; align-items:center; gap:8px; padding-right:12px; border-right:1px solid rgba(255,255,255,.15); }
+  #era-icon { font-size:26px; filter:drop-shadow(0 0 6px rgba(255,220,120,.6)); }
+  #era-name { color:#ffe9b0; font-weight:700; font-size:14px; letter-spacing:1px; white-space:nowrap; }
+  #era-sub { color:rgba(255,255,255,.5); font-size:10px; letter-spacing:2px; }
+  .res { display:flex; align-items:center; gap:4px; color:#fff; font-size:13px; font-weight:600;
+    padding:4px 8px; border-radius:10px; background:rgba(255,255,255,.06); white-space:nowrap; }
+  .res span { min-width:24px; text-align:right; font-variant-numeric:tabular-nums; }
+  .res.flash { animation:resFlash .5s; }
+  @keyframes resFlash { 0%{ background:rgba(255,220,120,.55);} 100%{ background:rgba(255,255,255,.06);} }
+  #clock { font-size:18px; width:34px; text-align:center; }
+  .icon-btn { width:34px; height:34px; border-radius:10px; border:1px solid rgba(255,255,255,.15);
+    background:rgba(255,255,255,.08); color:#fff; font-size:16px; cursor:pointer; transition:.2s; }
+  .icon-btn:hover { background:rgba(255,255,255,.2); transform:translateY(-1px); }
+
+  /* ---------- 底栏 ---------- */
+  #bottombar { position:absolute; left:50%; transform:translateX(-50%); bottom:12px;
+    display:flex; gap:10px; align-items:stretch; max-width:97vw; }
+  #build-dock { display:flex; gap:8px; padding:10px; align-items:center; overflow-x:auto; max-width:62vw; }
+  #build-dock::-webkit-scrollbar { height:4px; } #build-dock::-webkit-scrollbar-thumb { background:rgba(255,255,255,.2); border-radius:2px; }
+  .b-card { flex:0 0 auto; width:74px; padding:8px 4px 6px; border-radius:12px; text-align:center; cursor:pointer;
+    background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.1); transition:.18s; position:relative; }
+  .b-card:hover { background:rgba(255,255,255,.16); transform:translateY(-3px); }
+  .b-card.sel { background:rgba(120,200,255,.25); border-color:#7ad0ff; box-shadow:0 0 14px rgba(120,200,255,.5); }
+  .b-card.poor { opacity:.38; filter:grayscale(.6); }
+  .b-icon { font-size:24px; }
+  .b-name { color:#fff; font-size:11px; font-weight:600; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .b-cost { color:#ffd98a; font-size:9px; margin-top:1px; white-space:nowrap; }
+  #side-dock { display:flex; flex-direction:column; gap:8px; padding:10px; }
+  #god-dock { display:flex; gap:6px; }
+  .god-btn { flex:1; min-width:52px; padding:6px 2px; border-radius:10px; border:1px solid rgba(180,140,255,.35);
+    background:linear-gradient(160deg,rgba(120,80,220,.35),rgba(60,30,120,.35)); color:#e8dcff;
+    font-size:11px; cursor:pointer; text-align:center; transition:.18s; position:relative; overflow:hidden; }
+  .god-btn:hover:not(.cd):not(.poor) { transform:translateY(-2px); box-shadow:0 0 12px rgba(160,120,255,.5); }
+  .god-btn.poor { opacity:.4; filter:grayscale(.7); cursor:not-allowed; }
+  .god-btn.cd { cursor:not-allowed; }
+  .god-btn .cdmask { position:absolute; inset:0; background:rgba(0,0,0,.55); transform-origin:bottom; }
+  .god-btn b { display:block; font-size:16px; }
+  .act-btn { border:none; border-radius:12px; padding:8px 14px; font-size:13px; font-weight:700; cursor:pointer;
+    color:#1a1405; background:linear-gradient(135deg,#ffd76a,#ff9a3c); transition:.2s; letter-spacing:1px; }
+  .act-btn:hover:not(:disabled) { transform:translateY(-2px); box-shadow:0 6px 18px rgba(255,170,60,.45); }
+  .act-btn:disabled { filter:grayscale(.85); opacity:.5; cursor:not-allowed; }
+  #btn-eraup { background:linear-gradient(135deg,#8affc1,#3cd6a0); }
+  #btn-eraup.ready { animation:pulseGlow 1.4s infinite; }
+  #btn-eraup small { display:block; font-size:9px; font-weight:500; opacity:.75; margin-top:2px; letter-spacing:0; }
+  @keyframes pulseGlow { 0%,100%{ box-shadow:0 0 8px rgba(120,255,190,.4);} 50%{ box-shadow:0 0 24px rgba(120,255,190,.95);} }
+  .btn-launch { background:linear-gradient(135deg,#ff8a8a,#d63c3c) !important; color:#fff !important; animation:pulseGlowR 1.2s infinite; }
+  @keyframes pulseGlowR { 0%,100%{ box-shadow:0 0 10px rgba(255,100,100,.5);} 50%{ box-shadow:0 0 30px rgba(255,80,80,1);} }
+
+  /* ---------- 提示/祈祷/飘字 ---------- */
+  #toasts { position:absolute; top:70px; right:14px; display:flex; flex-direction:column; gap:8px; pointer-events:none !important; }
+  .toast { padding:10px 16px; border-radius:12px; color:#fff; font-size:13px; font-weight:600;
+    background:rgba(15,20,40,.85); border:1px solid rgba(255,255,255,.15); border-left:4px solid #ffd76a;
+    animation:toastIn .4s cubic-bezier(.2,1.4,.4,1); max-width:280px; box-shadow:0 6px 20px rgba(0,0,0,.4); }
+  .toast.out { animation:toastOut .4s forwards; }
+  @keyframes toastIn { from{ transform:translateX(120%); opacity:0;} to{ transform:none; opacity:1;} }
+  @keyframes toastOut { to{ transform:translateX(120%); opacity:0;} }
+  #prayers { position:absolute; inset:0; pointer-events:none !important; }
+  .prayer { position:absolute; transform:translate(-50%,-110%); cursor:pointer; pointer-events:auto !important;
+    background:linear-gradient(160deg,#fff8e8,#ffe9b8); color:#5a4410; font-size:12px; font-weight:700;
+    padding:7px 12px; border-radius:14px; white-space:nowrap; animation:prayBob 2s ease-in-out infinite;
+    box-shadow:0 4px 14px rgba(0,0,0,.3); border:1.5px solid #d9b25a; }
+  .prayer::after { content:""; position:absolute; left:50%; bottom:-7px; transform:translateX(-50%);
+    border:7px solid transparent; border-top-color:#ffe9b8; border-bottom:none; }
+  .prayer:hover { filter:brightness(1.1); }
+  @keyframes prayBob { 0%,100%{ margin-top:0;} 50%{ margin-top:-7px;} }
+  .floater { position:absolute; transform:translate(-50%,-50%); font-size:13px; font-weight:800; pointer-events:none !important;
+    text-shadow:0 2px 4px rgba(0,0,0,.6); animation:floatUp 1.4s ease-out forwards; }
+  @keyframes floatUp { 0%{ opacity:0; margin-top:6px;} 15%{ opacity:1;} 100%{ opacity:0; margin-top:-44px;} }
+
+  /* ---------- 覆盖层 ---------- */
+  .overlay { position:fixed; inset:0; z-index:50; display:flex; align-items:center; justify-content:center;
+    flex-direction:column; background:radial-gradient(ellipse at center,rgba(10,14,30,.55),rgba(5,8,18,.92));
+    transition:opacity .6s; }
+  .overlay.hidden { opacity:0; pointer-events:none; }
+  #overlay-intro h1 { font-size:min(64px,11vw); color:#ffe9b0; letter-spacing:14px; font-weight:900;
+    text-shadow:0 0 40px rgba(255,200,90,.55), 0 4px 0 rgba(120,70,0,.4); animation:titleFloat 3s ease-in-out infinite; }
+  @keyframes titleFloat { 0%,100%{ transform:translateY(0);} 50%{ transform:translateY(-10px);} }
+  #overlay-intro .sub { color:#8ad0ff; letter-spacing:8px; font-size:14px; margin-top:6px; }
+  #overlay-intro .desc { color:rgba(255,255,255,.82); font-size:15px; margin:26px 0 8px; text-align:center; line-height:1.9; }
+  #overlay-intro .tips { color:rgba(255,255,255,.45); font-size:12px; line-height:2; text-align:center; margin-bottom:28px; }
+  .big-btn { border:none; border-radius:999px; padding:16px 54px; font-size:19px; font-weight:900; letter-spacing:6px;
+    color:#24160a; background:linear-gradient(135deg,#ffe9a0,#ffb84d); cursor:pointer; transition:.25s;
+    box-shadow:0 0 34px rgba(255,190,80,.45); }
+  .big-btn:hover { transform:scale(1.06); box-shadow:0 0 54px rgba(255,190,80,.8); }
+
+  #overlay-era { pointer-events:none; background:radial-gradient(ellipse at center,rgba(20,26,50,.25),rgba(5,8,18,.75)); }
+  #era-anim { text-align:center; opacity:0; }
+  #era-anim.show { animation:eraTitle 3.4s cubic-bezier(.2,.8,.2,1) forwards; }
+  @keyframes eraTitle { 0%{ opacity:0; transform:scale(1.6); letter-spacing:60px; filter:blur(12px);}
+    18%{ opacity:1; transform:scale(1); filter:blur(0);} 80%{ opacity:1;} 100%{ opacity:0; transform:scale(.94);} }
+  #era-anim-title { font-size:min(72px,12vw); font-weight:900; color:#fff; letter-spacing:22px;
+    text-shadow:0 0 60px rgba(140,200,255,.9); }
+  #era-anim-sub { font-size:16px; color:#9fd0ff; letter-spacing:10px; margin-top:14px; }
+
+  #overlay-victory h1 { font-size:min(52px,9vw); color:#ffd0d0; letter-spacing:10px; font-weight:900;
+    text-shadow:0 0 50px rgba(255,120,120,.8); }
+  #v-stats { display:flex; gap:26px; margin:30px 0 34px; flex-wrap:wrap; justify-content:center; }
+  .v-stat { text-align:center; } .v-stat b { display:block; font-size:34px; color:#ffe9b0; }
+  .v-stat span { color:rgba(255,255,255,.55); font-size:12px; letter-spacing:2px; }
+
+  /* 电影黑边 */
+  .lb { position:fixed; left:0; right:0; height:0; background:#000; z-index:40; transition:height .9s cubic-bezier(.6,0,.3,1); }
+  .lb.top { top:0; } .lb.bot { bottom:0; }
+  body.cine .lb { height:9vh; }
+
+  @media (max-width:820px) {
+    #build-dock { max-width:58vw; } .b-card { width:62px; } .b-name { font-size:10px; }
+    #topbar { gap:6px; padding:6px 8px; } .res { font-size:11px; padding:3px 5px; }
+  }
+</style>
+</head>
+<body>
+<div id="stage"></div>
+
+<div id="ui">
+  <div id="topbar" class="glass">
+    <div id="era-badge">
+      <span id="era-icon">🔥</span>
+      <div><div id="era-name">远古时期</div><div id="era-sub">第 1 纪元</div></div>
+    </div>
+    <div class="res" title="食物：市民的口粮，农场产出">🌾<span id="r-food">0</span></div>
+    <div class="res" title="木材：建造的基础材料">🪵<span id="r-wood">0</span></div>
+    <div class="res" title="金币：税收与贸易">🪙<span id="r-gold">0</span></div>
+    <div class="res" title="信仰：施展神迹的力量">✨<span id="r-faith">0</span></div>
+    <div class="res" title="人口 / 住房容量">🧑<span id="r-pop">0/0</span></div>
+    <div class="res" title="幸福度">😊<span id="r-happy">0</span></div>
+    <div id="clock" title="昼夜">☀️</div>
+    <button class="icon-btn" id="btn-mute" title="音效开关">🔊</button>
+    <button class="icon-btn" id="btn-reset" title="重置存档">↺</button>
+  </div>
+
+  <div id="toasts"></div>
+  <div id="prayers"></div>
+
+  <div id="bottombar">
+    <div id="build-dock" class="glass"></div>
+    <div id="side-dock" class="glass">
+      <div id="god-dock"></div>
+      <button class="act-btn" id="btn-expand">🏝️ 填海扩岛</button>
+      <button class="act-btn" id="btn-eraup" disabled>⏫ 时代跃迁</button>
+    </div>
+  </div>
+</div>
+
+<div class="lb top"></div><div class="lb bot"></div>
+
+<div class="overlay" id="overlay-intro">
+  <h1>神明小岛</h1>
+  <div class="sub">DEUS ISLE · 文 明 演 化 模 拟</div>
+  <div class="desc">你是这座小岛的上帝。<br>引导你的子民，从远古篝火，一路走向星辰大海。</div>
+  <div class="tips">🖱️ 拖拽旋转视角 · 滚轮缩放 · 点击下方卡片后在岛上建造<br>
+    💬 点击祈祷气泡回应子民 · ✨ 用神迹帮助他们（或捣乱）<br>
+    🏛️ 每个时代建造一座奇观，集齐条件即可让文明跃迁</div>
+  <button class="big-btn" id="btn-start">✨ 开始创造</button>
+</div>
+
+<div class="overlay hidden" id="overlay-era">
+  <div id="era-anim"><div id="era-anim-title"></div><div id="era-anim-sub"></div></div>
+</div>
+
+<div class="overlay hidden" id="overlay-victory">
+  <h1>🚀 文明起航</h1>
+  <div class="desc" style="color:rgba(255,255,255,.8);margin-top:14px;">整座小岛化作方舟，载着你的孩子驶向群星。<br>从一堆篝火到一艘星舰——这是属于你的一文明史。</div>
+  <div id="v-stats"></div>
+  <button class="big-btn" id="btn-again">🌱 再育一代文明</button>
+</div>
+
+<script type="module">
+import * as THREE from './vendor/three.module.js';
+import { OrbitControls } from './vendor/OrbitControls.js';
+
+/* ================= 工具 ================= */
+const rand=(a=1,b)=> b===undefined? Math.random()*a : a+Math.random()*(b-a);
+const randi=(a,b)=> Math.floor(rand(a,b+1));
+const pick=arr=>arr[Math.floor(Math.random()*arr.length)];
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const lerp=(a,b,t)=>a+(b-a)*t;
+const V3=(x=0,y=0,z=0)=>new THREE.Vector3(x,y,z);
+const $=id=>document.getElementById(id);
+
+/* 补间动画 */
+const tweens=[];
+function tw(dur,fn,ease=t=>t,done){ tweens.push({t:0,dur,fn,ease,done}); }
+const easeOutBack=t=>{const c=1.7;t-=1;return 1+t*t*((c+1)*t+c);};
+const easeIn=t=>t*t*t;
+function updateTweens(dt){
+  for(let i=tweens.length-1;i>=0;i--){ const w=tweens[i]; w.t+=dt;
+    const k=clamp(w.t/w.dur,0,1); w.fn(w.ease(k));
+    if(k>=1){ tweens.splice(i,1); w.done&&w.done(); } }
+}
+
+/* ================= 音效（极简合成） ================= */
+let AC=null, muted=false;
+function ac(){ if(!AC) AC=new (window.AudioContext||window.webkitAudioContext)(); return AC; }
+function beep(f,dur=.15,type='sine',vol=.18,delay=0,slide=0){
+  if(muted) return; try{
+    const a=ac(),o=a.createOscillator(),g=a.createGain();
+    o.type=type; o.frequency.value=f;
+    if(slide) o.frequency.exponentialRampToValueAtTime(Math.max(30,f+slide),a.currentTime+delay+dur);
+    g.gain.setValueAtTime(0,a.currentTime+delay);
+    g.gain.linearRampToValueAtTime(vol,a.currentTime+delay+.015);
+    g.gain.exponentialRampToValueAtTime(.001,a.currentTime+delay+dur);
+    o.connect(g).connect(a.destination); o.start(a.currentTime+delay); o.stop(a.currentTime+delay+dur+.05);
+  }catch(e){}
+}
+const sfx={
+  build(){ beep(300,.12,'triangle',.22,0,180); beep(520,.1,'sine',.14,.07); },
+  faith(){ beep(880,.25,'sine',.12); beep(1320,.3,'sine',.08,.08); },
+  error(){ beep(160,.18,'square',.12,0,-60); },
+  click(){ beep(660,.05,'sine',.08); },
+  miracle(){ beep(220,.5,'sawtooth',.1,0,660); beep(1100,.6,'sine',.1,.15,440); },
+  boom(){ beep(90,.5,'sawtooth',.3,0,-55); beep(50,.7,'triangle',.3,.05,-25); },
+  era(){ [523,659,784,1046,1318].forEach((f,i)=>beep(f,.4,'triangle',.16,i*.13)); },
+  pop(){ beep(740,.07,'sine',.1,0,240); },
+  launch(){ beep(60,2.2,'sawtooth',.25,0,140); beep(120,2.0,'triangle',.15,.3,260); },
+};
+$('btn-mute').onclick=()=>{ muted=!muted; $('btn-mute').textContent=muted?'🔇':'🔊'; };
+
+/* ================= 时代数据 ================= */
+const ERAS=[
+ {name:'远古时期',   icon:'🔥', sky:0xaee2ff, night:0x0a1030, dusk:0xffb27a, fog:0xaee2ff, water:0x2f8fd0, grass:0x7ec850, sand:0xf0dfb0, rock:0x8a7f6a, leaf:0x4f9e3f, sun:0xfff2d8},
+ {name:'古典时代',   icon:'🏺', sky:0xb8d8f0, night:0x0c1236, dusk:0xff9a5a, fog:0xc8d8e8, water:0x2aa5c9, grass:0xa8bf62, sand:0xe8d29a, rock:0xa89a7a, leaf:0x7a9e4a, sun:0xffe8c0},
+ {name:'中世纪',     icon:'🏮', sky:0xcfe8e0, night:0x0a1430, dusk:0xff9a7a, fog:0xd0e8e0, water:0x3a9db8, grass:0x6fbf63, sand:0xe0d0a0, rock:0x7a8a7a, leaf:0x3f8e4f, sun:0xfff0d0},
+ {name:'工业时代',   icon:'🏭', sky:0xc2c2b2, night:0x0c0e24, dusk:0xe88a5a, fog:0xc2bcae, water:0x3d7f8e, grass:0x7da05a, sand:0xcfc0a0, rock:0x6a6a6a, leaf:0x5a7a42, sun:0xf0e0c0},
+ {name:'现代',       icon:'🏙️', sky:0x9fd4ff, night:0x081028, dusk:0xff9a8a, fog:0xa8d4f0, water:0x2f8fd0, grass:0x69b868, sand:0xf0e0b0, rock:0x8a8a8a, leaf:0x4aa050, sun:0xfff4e0},
+ {name:'未来纪元',   icon:'🌐', sky:0xa8b8f0, night:0x0a0e30, dusk:0xc88aff, fog:0xb0bcec, water:0x30c0e0, grass:0x5ac8a0, sand:0xd0e0e8, rock:0x7a8aa0, leaf:0x3fc0a0, sun:0xe0f0ff},
+ {name:'太空时代',   icon:'🚀', sky:0x3a4a80, night:0x05081c, dusk:0x8a6ad0, fog:0x44508a, water:0x1a4a80, grass:0x4a8a78, sand:0xb0c0d0, rock:0x5a6a8a, leaf:0x3a8a80, sun:0xc0d8ff},
+];
+const ERA_TITLE_SUB=['钻木取火 · 文明初啼','金字塔下 · 众神之国','青瓦飞檐 · 礼乐之邦','蒸汽轰鸣 · 钢铁洪流','霓虹闪烁 · 摩天丛林','量子之光 · 生态穹顶','星辰大海 · 方舟起航'];
+/* 建筑配色（墙/顶/点缀） */
+const BC=[
+ {wall:0xb08a5a,roof:0x8a6238,acc:0xe0c890},{wall:0xeadfc2,roof:0xc9a86a,acc:0x3a6ea5},
+ {wall:0x9a5a3a,roof:0x3a3f4a,acc:0xd43a2a},{wall:0x8a4a3a,roof:0x484850,acc:0x8a9aaa},
+ {wall:0xdfe6ee,roof:0x5a7a9a,acc:0x3a5a7a},{wall:0xe8f2fa,roof:0x2a3a5a,acc:0x35e0e6},
+ {wall:0xc8d2e4,roof:0x1a2a4a,acc:0x8aaaff},
+];
+/* 建筑目录：cost=[木,金,信仰] */
+const CATALOG=[
+ {t:'house', icon:'🛖', cost:[20,0,0],  names:['茅屋','泥砖屋','中式瓦房','砖石里弄','公寓楼','生态居所','失重舱居'], tip:'住房 · 人口容量+4'},
+ {t:'farm',  icon:'🌾', cost:[15,0,0],  names:['采集地','灌溉农田','梯田','机械化农场','都市农场','垂直农场','水培穹舱'], tip:'生产食物'},
+ {t:'wood',  icon:'🪵', cost:[10,0,0],  names:['伐木场','采木工坊','林场','锯木厂','建材站','合成材料坊','物质打印站'], tip:'生产木材'},
+ {t:'market',icon:'🏪', cost:[25,10,0], names:['以物易市','绿洲集市','古代市集','百货商号','购物中心','全息商城','星际交易所'], tip:'产出金币 · 幸福+2'},
+ {t:'temple',icon:'⛩️', cost:[35,15,0], names:['图腾祭坛','太阳神庙','宗祠庙宇','教堂','文化广场','冥想圣殿','星辉圣所'], tip:'产出信仰 · 幸福+3'},
+ {t:'park',  icon:'🌳', cost:[15,10,0], names:['圣地林苑','皇家花园','园林','街心公园','中央公园','浮空花园','生态穹园'], tip:'幸福+5'},
+ {t:'wonder',icon:'🏛️', cost:[60,40,20],names:['巨石图腾阵','金字塔','玲珑宝塔','大钟楼','天际塔','生态穹顶','方舟发射台'], tip:'时代奇观 · 跃迁必需'},
+];
+const CATMAP={house:'住房',farm:'农业',wood:'工业',market:'商业',temple:'信仰',park:'环境',wonder:'奇观'};
+const wonderCost=e=>[60+e*40, 40+e*30, 20+e*10];
+const eraReq=e=>({pop:8+e*7, gold:50+e*45});
+const EXPAND_COST=[[80,60],[150,120],[250,200]];
+
+/* ================= 游戏状态 ================= */
+const CELL=2.3;
+const S={
+  started:false, over:false,
+  era:0, food:40, wood:60, gold:50, faith:15,
+  pop:3, happy:70, expand:0, dayTime:0.32, timeScale:1, playTime:0,
+  cells:new Map(),        // "x,z" -> {t, era, relic, g}
+  wonders:{},             // era -> true
+  sel:null, buffs:{rain:0}, cds:{rain:0,meteor:0,bless:0,haste:0},
+  transitioning:false,
+};
+/* --- 随机地形核心：种子 + 高度场 + 不规则岸线 + 填海地块 --- */
+let SEED=rand(1000);
+let PATCHES=[];
+function initPatches(){ // 3 块待填海的不规则陆地，位置由种子决定
+  PATCHES=[0,1,2].map(i=>({ ang: SEED*.7+i*2.2+((SEED*(i+3))%1)*.9, dist: 13.2, r: 4.6+i*1.1, owned:false }));
+}
+initPatches();
+const R=()=>13;                              // 主岛基准半径
+const maxCell=()=>Math.ceil((R()+8)/CELL);
+const cellKey=(x,z)=>x+','+z;
+function hnoise(x,z){ return Math.sin(x*.32+SEED)*Math.cos(z*.29+SEED*1.7)+.55*Math.sin(x*.74+SEED*2.3)*Math.sin(z*.68+SEED*.9); }
+function outlineR(a){ return (R()-1.6)*(1+.13*Math.sin(3*a+SEED)+.09*Math.sin(5*a+SEED*2.1)+.06*Math.sin(8*a+SEED*3.7)); }
+function patchR(p,a){ return p.r*(1+.16*Math.sin(4*a+SEED+p.ang)+.08*Math.sin(7*a+SEED*2+p.ang)); }
+function landH(x,z){                          // 世界坐标 -> 地面高度（<0 为海）
+  let best=-1;
+  const d=Math.hypot(x,z), a=Math.atan2(z,x), ro=outlineR(a);
+  if(d<ro){ const fall=smooth(ro,ro-2.8,d); best=fall*(1.05+hnoise(x,z)*.85); }
+  for(const p of PATCHES){ if(!p.owned) continue;
+    const px=Math.cos(p.ang)*p.dist, pz=Math.sin(p.ang)*p.dist;
+    const dd=Math.hypot(x-px,z-pz), aa=Math.atan2(z-pz,x-px), pr=patchR(p,aa);
+    if(dd<pr){ const fall=smooth(pr,pr-2,dd); best=Math.max(best, fall*(.85+hnoise(x+40,z-30)*.4)); } }
+  return best;
+}
+const walkable=(x,z)=>landH(x*CELL,z*CELL)>0.5;
+const cellY=(x,z)=>Math.max(0,landH(x*CELL,z*CELL));
+function findCellNear(cx0,cz0){               // 螺旋搜索最近的可建空地
+  for(let r=0;r<8;r++) for(let dx=-r;dx<=r;dx++) for(let dz=-r;dz<=r;dz++){
+    if(Math.max(Math.abs(dx),Math.abs(dz))!==r) continue;
+    const x=cx0+dx, z=cz0+dz;
+    if(walkable(x,z)&&!S.cells.has(cellKey(x,z))) return {x,z};
+  }
+  return null;
+}
+const popCap=()=>{ let c=0; S.cells.forEach(b=>{ if(b.t==='house') c+=4; }); return c; };
+const eraMul=()=>1+S.era*0.25;
+const countType=t=>{ let n=0; S.cells.forEach(b=>{ if(b.t===t) n++; }); return n; };
+const totalBuildings=()=>S.cells.size;
+
+/* ================= Three.js 基础 ================= */
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setSize(innerWidth,innerHeight);
+renderer.shadowMap.enabled=true;
+renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+$('stage').appendChild(renderer.domElement);
+
+const scene=new THREE.Scene();
+scene.fog=new THREE.Fog(0xaee2ff,60,220);
+const camera=new THREE.PerspectiveCamera(46,innerWidth/innerHeight,.1,600);
+camera.position.set(30,26,34);
+const controls=new OrbitControls(camera,renderer.domElement);
+controls.enableDamping=true; controls.dampingFactor=.06;
+controls.maxPolarAngle=Math.PI*.46; controls.minDistance=12; controls.maxDistance=110;
+controls.autoRotate=true; controls.autoRotateSpeed=.5;
+controls.target.set(0,1,0);
+addEventListener('resize',()=>{ camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth,innerHeight); });
+renderer.domElement.addEventListener('pointerdown',()=>{ controls.autoRotate=false; },{once:true});
+
+const hemi=new THREE.HemisphereLight(0xcfe8ff,0x5a6a4a,.7); scene.add(hemi);
+const sun=new THREE.DirectionalLight(0xfff2d8,1.4);
+sun.castShadow=true; sun.shadow.mapSize.set(2048,2048);
+sun.shadow.camera.left=-40; sun.shadow.camera.right=40; sun.shadow.camera.top=40; sun.shadow.camera.bottom=-40;
+sun.shadow.camera.far=220; sun.shadow.bias=-0.0006;
+scene.add(sun); scene.add(sun.target);
+
+/* 卡通渐变 */
+const gradTex=new THREE.DataTexture(new Uint8Array([90,90,90,255, 165,165,165,255, 225,225,225,255, 255,255,255,255]),4,1,THREE.RGBAFormat);
+gradTex.minFilter=gradTex.magFilter=THREE.NearestFilter; gradTex.needsUpdate=true;
+
+const MATS=new Map();
+function toon(color){ let m=MATS.get(color); if(!m){ m=new THREE.MeshToonMaterial({color,gradientMap:gradTex}); MATS.set(color,m);} return m; }
+const BASIC=new Map();
+function basic(color,op=1){ const k=color+'|'+op; let m=BASIC.get(k); if(!m){ m=new THREE.MeshBasicMaterial({color,transparent:op<1,opacity:op}); BASIC.set(k,m);} return m; }
+const WIN_MAT=new THREE.MeshBasicMaterial({color:0x3a4a5a});        // 窗（昼夜变色）
+const OL_MAT=new THREE.MeshBasicMaterial({color:0x14141c,side:THREE.BackSide});
+function addOL(mesh,s=1.05){ const o=new THREE.Mesh(mesh.geometry,OL_MAT); o.scale.setScalar(s); o.raycast=()=>{}; mesh.add(o); }
+
+/* 部件助手 */
+function _m(geo,color,o={}){
+  const mesh=new THREE.Mesh(geo, o.basic?basic(color,o.op??1):toon(color));
+  mesh.position.set(o.x||0,o.y||0,o.z||0);
+  if(o.rx)mesh.rotation.x=o.rx; if(o.ry)mesh.rotation.y=o.ry; if(o.rz)mesh.rotation.z=o.rz;
+  if(o.s) mesh.scale.set(o.s[0]??o.s,o.s[1]??o.s,o.s[2]??o.s);
+  if(!o.basic){ mesh.castShadow=true; mesh.receiveShadow=true; if(o.ol!==false) addOL(mesh,o.ols); }
+  if(o.anim&&!GHOSTING){ mesh.userData.anim=o.anim; mesh.userData.ph=rand(6.28); animBits.push(mesh); }
+  return mesh;
+}
+const B=(w,h,d,c,o)=>_m(new THREE.BoxGeometry(w,h,d),c,o);
+const C=(rt,rb,h,seg,c,o)=>_m(new THREE.CylinderGeometry(rt,rb,h,seg),c,o);
+const CO=(r,h,seg,c,o)=>_m(new THREE.ConeGeometry(r,h,seg),c,o);
+const SP=(r,c,o)=>_m(new THREE.SphereGeometry(r,o.seg||10,o.seg||8),c,o);
+const G=()=>new THREE.Group();
+const animBits=[];
+let GHOSTING=false; // 构建预览幽灵时禁用动画注册
+function win(g,x,y,z,w=.16,h=.16,ry=0){ const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,.03),WIN_MAT); m.position.set(x,y,z); m.rotation.y=ry; g.add(m); return m; }
+
+/* ================= 环境 ================= */
+const PAL={}; // 当前调色板（逐帧向目标过渡）
+const PAL_KEYS=['sky','night','dusk','fog','water','grass','sand','rock','leaf','sun'];
+PAL_KEYS.forEach(k=>PAL[k]=new THREE.Color(ERAS[0][k]));
+const PAL_T={}; PAL_KEYS.forEach(k=>PAL_T[k]=new THREE.Color(ERAS[0][k]));
+function setPalette(e){ PAL_KEYS.forEach(k=>PAL_T[k].set(ERAS[e][k])); }
+
+const world=new THREE.Group(); scene.add(world);
+const islandGroup=new THREE.Group(); world.add(islandGroup);   // 发射时整体升空
+
+/* --- 海 --- */
+const waterGeo=new THREE.PlaneGeometry(420,420,72,72);
+const waterMat=new THREE.MeshPhongMaterial({color:0x2f8fd0,shininess:90,specular:0x88ccff,transparent:true,opacity:.94});
+const water=new THREE.Mesh(waterGeo,waterMat);
+water.rotation.x=-Math.PI/2; water.position.y=-2.2; water.receiveShadow=true; scene.add(water);
+const wBase=waterGeo.attributes.position.array.slice();
+
+/* --- 地形网格（高度场 + 顶点色） --- */
+const terrainMat=new THREE.MeshToonMaterial({vertexColors:true,gradientMap:gradTex});
+const rockMat=new THREE.MeshToonMaterial({color:0x8a7f6a,gradientMap:gradTex});
+const foamMat=new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.45,side:THREE.DoubleSide,depthWrite:false});
+let terrainMeshes=[], skirtMeshes=[], foamMeshes=[];
+function buildTopGrid(cx,cz,size,res){
+  const seg=Math.ceil(size/res);
+  const geo=new THREE.PlaneGeometry(size,size,seg,seg);
+  geo.rotateX(-Math.PI/2);
+  const pos=geo.attributes.position, n=pos.count;
+  const colors=new Float32Array(n*3), zones=new Uint8Array(n), jit=new Float32Array(n);
+  for(let i=0;i<n;i++){
+    const h=landH(pos.getX(i)+cx, pos.getZ(i)+cz);
+    pos.setY(i, h<0? -0.6 : h);
+    zones[i]= h<0.55?0 : h>1.85?2 : 1;   // 0 沙滩 1 草地 2 岩石
+    jit[i]=rand(.88,1.06);
+  }
+  geo.setAttribute('color',new THREE.BufferAttribute(colors,3));
+  geo.computeVertexNormals();
+  const m=new THREE.Mesh(geo,terrainMat);
+  m.receiveShadow=true; m.castShadow=true;
+  m.position.set(cx,0,cz);
+  m.userData.zones=zones; m.userData.jit=jit;
+  return m;
+}
+function ringStrip(rTop,rBot,yTop,yBot,mat,shadow){
+  const N=64, verts=[];
+  for(let i=0;i<=N;i++){ const a=i/N*Math.PI*2;
+    verts.push(Math.cos(a)*rTop(a),yTop,Math.sin(a)*rTop(a));
+    verts.push(Math.cos(a)*rBot(a),yBot,Math.sin(a)*rBot(a)); }
+  const idx=[];
+  for(let i=0;i<N;i++){ const a=i*2; idx.push(a,a+1,a+2, a+1,a+3,a+2); }
+  const g=new THREE.BufferGeometry();
+  g.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));
+  g.setIndex(idx); g.computeVertexNormals();
+  const m=new THREE.Mesh(g,mat); if(shadow)m.castShadow=true; return m;
+}
+const _zc=[new THREE.Color(),new THREE.Color(),new THREE.Color()];
+function recolorTerrain(){
+  _zc[0].copy(PAL.sand); _zc[1].copy(PAL.grass); _zc[2].copy(PAL.rock);
+  for(const m of terrainMeshes){
+    const zones=m.userData.zones, jit=m.userData.jit, col=m.geometry.attributes.color;
+    for(let i=0;i<zones.length;i++){ const z=zones[i],j=jit[i];
+      col.setXYZ(i,_zc[z].r*j,_zc[z].g*j,_zc[z].b*j); }
+    col.needsUpdate=true;
+  }
+}
+function buildIsland(){
+  terrainMeshes.forEach(m=>{ islandGroup.remove(m); m.geometry.dispose(); });
+  skirtMeshes.forEach(m=>{ islandGroup.remove(m); m.geometry.dispose(); });
+  foamMeshes.forEach(m=>{ scene.remove(m); m.geometry.dispose(); });
+  terrainMeshes=[]; skirtMeshes=[]; foamMeshes=[];
+  const main=buildTopGrid(0,0,(R()+9)*2,1);
+  islandGroup.add(main); terrainMeshes.push(main);
+  const sk=ringStrip(a=>outlineR(a)+.2, a=>outlineR(a)*.55, -.1,-5.5, rockMat,true);
+  islandGroup.add(sk); skirtMeshes.push(sk);
+  const fo=ringStrip(a=>outlineR(a)+.1, a=>outlineR(a)+1.5, -1.95,-1.95, foamMat,false);
+  scene.add(fo); foamMeshes.push(fo);
+  PATCHES.forEach(p=>{ if(!p.owned) return;
+    const px=Math.cos(p.ang)*p.dist, pz=Math.sin(p.ang)*p.dist;
+    const g=buildTopGrid(px,pz,(p.r+4)*2,.9); islandGroup.add(g); terrainMeshes.push(g);
+    const sk2=ringStrip(a=>patchR(p,a)+.2, a=>patchR(p,a)*.5, -.1,-4.5, rockMat,true);
+    sk2.position.set(px,0,pz); islandGroup.add(sk2); skirtMeshes.push(sk2);
+    const fo2=ringStrip(a=>patchR(p,a)+.1, a=>patchR(p,a)+1.4, -1.95,-1.95, foamMat,false);
+    fo2.position.set(px,0,pz); scene.add(fo2); foamMeshes.push(fo2);
+  });
+  recolorTerrain();
+  scatterNature();
+}
+
+/* --- 植被/石头（贴合地形、避开建筑） --- */
+const leafMat=new THREE.MeshToonMaterial({color:0x4f9e3f,gradientMap:gradTex});
+let natureGroup=null;
+function scatterNature(){
+  if(natureGroup) islandGroup.remove(natureGroup);
+  natureGroup=G(); islandGroup.add(natureGroup);
+  const n=30+PATCHES.filter(p=>p.owned).length*10;
+  let placed=0, tries=0;
+  while(placed<n&&tries<n*10){ tries++;
+    const a=rand(Math.PI*2), d=rand(2.5,R()+7);
+    const x=Math.cos(a)*d, z=Math.sin(a)*d, h=landH(x,z);
+    if(h<0.6) continue;
+    let blocked=false;
+    S.cells.forEach(b=>{ if(Math.hypot(b.g.position.x-x,b.g.position.z-z)<1.7) blocked=true; });
+    if(blocked) continue;
+    placed++;
+    if(Math.random()<.78){ // 树
+      const t=G(), s=rand(.7,1.25);
+      t.add(C(.09,.13,.7,6,0x7a5a38,{y:.35,ol:false}));
+      if(Math.random()<.5){ t.add(_m(new THREE.IcosahedronGeometry(.55,0),0xffffff,{y:1.0,ol:false})).material=leafMat; }
+      else { t.add(CO(.55,1.2,7,0xffffff,{y:1.05,ol:false})).material=leafMat; }
+      t.position.set(x,h-.05,z); t.scale.setScalar(s); t.rotation.y=rand(6.28);
+      natureGroup.add(t);
+    } else { // 石头
+      const r=_m(new THREE.IcosahedronGeometry(rand(.2,.42),0),0x9a9a9a,{x,y:h,z,ol:false,s:[1,rand(.6,.9),1]});
+      r.material=rockMat; natureGroup.add(r);
+    }
+  }
+}
+buildIsland();
+
+/* --- 云 --- */
+const clouds=[];
+for(let i=0;i<7;i++){
+  const c=G(), mat=new THREE.MeshToonMaterial({color:0xffffff,gradientMap:gradTex,transparent:true,opacity:.92});
+  const puffs=randi(3,5);
+  for(let j=0;j<puffs;j++) c.add(_m(new THREE.IcosahedronGeometry(rand(.9,1.7),0),0xffffff,{x:j*1.4-puffs*.7+rand(-.4,.4),y:rand(-.25,.3),z:rand(-.5,.5),ol:false})).material=mat;
+  c.position.set(rand(-70,70),rand(15,26),rand(-70,70));
+  c.userData.sp=rand(.3,.8); scene.add(c); clouds.push(c);
+}
+/* --- 小船 --- */
+const boat=G();
+boat.add(B(1.6,.4,.7,0x8a5a3a,{y:.2}));
+boat.add(B(1.2,.3,.5,0xa06a42,{y:.45}));
+boat.add(C(.04,.04,1.6,6,0x6a4a2a,{y:1.2,ol:false}));
+boat.add(B(.7,.9,.04,0xf0e8d8,{x:.35,y:1.25,ol:false}));
+scene.add(boat);
+/* --- 飞鸟 --- */
+const birds=[];
+for(let i=0;i<4;i++){ const b=G();
+  b.add(B(.3,.06,.1,0xffffff,{ol:false})); b.add(B(.1,.06,.3,0xffffff,{ol:false}));
+  b.userData={r:rand(20,34),h:rand(10,16),sp:rand(.25,.5),ph:rand(6.28)};
+  scene.add(b); birds.push(b); }
+/* --- 星星 --- */
+const starGeo=new THREE.BufferGeometry();
+{ const p=[]; for(let i=0;i<420;i++){ const a=rand(Math.PI*2),e=rand(.06,1.4),r=260;
+  p.push(Math.cos(a)*Math.cos(e)*r, Math.sin(e)*r, Math.sin(a)*Math.cos(e)*r); } 
+  starGeo.setAttribute('position',new THREE.Float32BufferAttribute(p,3)); }
+const starMat=new THREE.PointsMaterial({color:0xffffff,size:1.6,sizeAttenuation:false,transparent:true,opacity:0,fog:false});
+scene.add(new THREE.Points(starGeo,starMat));
+/* --- 太阳/月亮 --- */
+const sunSpr=_m(new THREE.SphereGeometry(4,16,12),0xffe9a0,{basic:true,ol:false}); scene.add(sunSpr);
+const moonSpr=_m(new THREE.SphereGeometry(2.6,16,12),0xe8ecff,{basic:true,ol:false}); scene.add(moonSpr);
+sunSpr.material.fog=false; moonSpr.material.fog=false;
+
+/* ================= 粒子系统 ================= */
+const PMAX=1400;
+const pGeo=new THREE.BufferGeometry();
+const pPos=new Float32Array(PMAX*3), pCol=new Float32Array(PMAX*3);
+pGeo.setAttribute('position',new THREE.BufferAttribute(pPos,3));
+pGeo.setAttribute('color',new THREE.BufferAttribute(pCol,3));
+const pMat=new THREE.PointsMaterial({size:.32,vertexColors:true,transparent:true,opacity:.95,depthWrite:false});
+const points=new THREE.Points(pGeo,pMat); points.frustumCulled=false; scene.add(points);
+const parts=[]; // {x,y,z,vx,vy,vz,life,max,r,g,b,grav,size?}
+const _c=new THREE.Color();
+function burst(pos,color,n=24,sp=4,life=1,grav=-6,up=3){
+  _c.set(color);
+  for(let i=0;i<n;i++){ if(parts.length>=PMAX) parts.shift();
+    const a=rand(Math.PI*2), e=rand(-1,1), v=rand(sp*.3,sp);
+    parts.push({x:pos.x,y:pos.y,z:pos.z, vx:Math.cos(a)*v, vy:rand(up*.3,up)+e, vz:Math.sin(a)*v,
+      life:0, max:rand(life*.5,life), r:_c.r,g:_c.g,b:_c.b, grav});
+  }
+}
+function updateParts(dt){
+  let w=0;
+  for(let i=0;i<parts.length;i++){ const p=parts[i]; p.life+=dt;
+    if(p.life<p.max){ p.vy+=p.grav*dt; p.x+=p.vx*dt; p.y+=p.vy*dt; p.z+=p.vz*dt; parts[w++]=p; } }
+  parts.length=w;
+  for(let i=0;i<PMAX;i++){ const on=i<w;
+    pPos[i*3]=on?parts[i].x:0; pPos[i*3+1]=on?parts[i].y:-999; pPos[i*3+2]=on?parts[i].z:0;
+    if(on){ const f=1-parts[i].life/parts[i].max;
+      pCol[i*3]=parts[i].r*f; pCol[i*3+1]=parts[i].g*f; pCol[i*3+2]=parts[i].b*f; } }
+  pGeo.attributes.position.needsUpdate=true; pGeo.attributes.color.needsUpdate=true;
+}
+/* 雨 */
+const RAIN_N=700;
+const rainGeo=new THREE.BufferGeometry();
+const rPos=new Float32Array(RAIN_N*3);
+rainGeo.setAttribute('position',new THREE.BufferAttribute(rPos,3));
+const rainPts=new THREE.Points(rainGeo,new THREE.PointsMaterial({color:0x9fc8ff,size:.22,transparent:true,opacity:.7,depthWrite:false}));
+rainPts.visible=false; rainPts.frustumCulled=false; scene.add(rainPts);
+const rainDrops=[];
+for(let i=0;i<RAIN_N;i++) rainDrops.push({x:0,y:0,z:0,sp:rand(16,24)});
+function resetDrop(d){ const a=rand(Math.PI*2),r=rand(R()+10); d.x=Math.cos(a)*r; d.z=Math.sin(a)*r; d.y=rand(8,30); }
+rainDrops.forEach(resetDrop);
+/* 烟囱 */
+const smokeEmitters=[];
+
+/* ================= 建筑网格构建（7 时代 × 7 类） ================= */
+function makeBuilding(type,e){
+  const g=G(), c=BC[e];
+  switch(type){
+  case 'house':{
+    if(e===0){ g.add(C(.55,.65,.7,7,c.wall,{y:.35})); g.add(CO(.8,.65,7,c.roof,{y:.95}));
+      g.add(B(.22,.4,.06,0x4a3418,{y:.2,z:.6,ol:false})); }
+    else if(e===1){ g.add(B(.95,.62,.95,c.wall,{y:.31})); g.add(B(1.05,.14,1.05,c.roof,{y:.68}));
+      g.add(B(.5,.3,.5,c.wall,{y:.85,x:-.2})); win(g,.2,.35,.49); }
+    else if(e===2){ g.add(B(.95,.55,.85,c.wall,{y:.28})); g.add(CO(.8,.5,4,c.roof,{y:.78,ry:Math.PI/4}));
+      g.add(S(.09,c.acc,{y:.52,z:.46,basic:true})); win(g,-.25,.3,.44); }
+    else if(e===3){ g.add(B(1,.75,.9,c.wall,{y:.38})); g.add(CO(.75,.4,4,c.roof,{y:.95,ry:Math.PI/4}));
+      g.add(B(.16,.5,.16,0x6a6a6a,{x:.32,y:1.1,ol:false})); win(g,0,.4,.46); win(g,-.3,.4,.46); }
+    else if(e===4){ g.add(B(1,1.5,.9,c.wall,{y:.75})); g.add(B(1.06,.1,.96,c.roof,{y:1.53}));
+      for(let f=0;f<3;f++) for(let wI=-1;wI<=1;wI++) win(g,wI*.3,.4+f*.45,.46);
+      g.add(B(.3,.15,.2,0x9aa,{y:1.62,x:.2,ol:false})); }
+    else if(e===5){ g.add(B(.95,1.1,.95,c.wall,{y:.55}));
+      g.add(B(1.01,.09,1.01,c.acc,{y:.6,basic:true,op:.85})); g.add(CO(.7,.5,6,c.roof,{y:1.32}));
+      win(g,0,.85,.49); win(g,0,.3,.49); }
+    else { const pod=SP(.55,c.wall,{y:1.0,s:[1,.85,1]}); pod.userData.anim='bob'; pod.userData.ph=rand(6.28); animBits.push(pod);
+      g.add(pod); g.add(_m(new THREE.TorusGeometry(.62,.06,8,20),c.acc,{y:.55,rx:Math.PI/2,basic:true,op:.9,anim:'spin'}));
+      win(g,0,1.05,.5); g.add(B(.5,.06,.5,c.roof,{y:.1})); }
+    break; }
+  case 'farm':{
+    g.add(B(1.9,.1,1.9,e<3?0x8a6a42:0x7a8a5a,{y:.05,ol:false}));
+    const cropC=[0x9edb6a,0xd8c860,0x6ad88a,0xd8b84a,0x8ad86a,0x50e0b0,0x60e0d8][e];
+    for(let i=-1;i<=1;i++) g.add(B(1.6,.16,.3,cropC,{y:.16,z:i*.55,ol:false}));
+    if(e===1){ g.add(B(1.9,.06,.3,0x3aa5c9,{y:.08,x:0,basic:true,op:.8})); }
+    if(e===2){ g.add(B(1.9,.05,1.9,0x4ab8d8,{y:.02,basic:true,op:.5})); g.add(B(.3,.5,.3,c.wall,{x:.7,y:.35,z:-.7})); g.add(CO(.35,.25,4,c.roof,{x:.7,y:.7,z:-.7,ry:Math.PI/4})); }
+    if(e===3){ g.add(C(.25,.3,1,8,0xb8b8b8,{x:.72,y:.6,z:-.72})); g.add(CO(.3,.25,8,0x8a4a3a,{x:.72,y:1.2,z:-.72})); }
+    if(e===4){ g.add(B(.55,.5,.45,0xc03a2a,{x:.65,y:.35,z:-.7})); g.add(CO(.45,.3,4,0xe8e0d0,{x:.65,y:.72,z:-.7,ry:Math.PI/4})); }
+    if(e===5){ for(let f=0;f<3;f++){ g.add(B(1.1,.06,1.1,0xd8f0f8,{y:.35+f*.42,basic:true,op:.4}));
+        g.add(B(1,.14,1,0x50e0b0,{y:.28+f*.42,basic:true,op:.75})); } }
+    if(e===6){ g.add(_m(new THREE.SphereGeometry(.95,14,10,0,6.3,0,1.6),0x60e0d8,{y:.2,basic:true,op:.3,anim:'spin'}));
+      g.add(B(1.2,.3,1.2,0x3a8a80,{y:.3})); }
+    break; }
+  case 'wood':{
+    for(let i=0;i<3;i++) g.add(C(.14,.14,1.1,7,0x8a6238,{z:-.5+i*.35,y:.16,rx:Math.PI/2,ry:rand(.4)}));
+    if(e===0){ g.add(B(.5,.3,.4,0x9a9a9a,{x:.5,y:.15,z:.4})); }
+    else if(e===1){ g.add(B(.7,.5,.6,c.wall,{x:.45,y:.25,z:.45})); }
+    else if(e===2){ g.add(B(.7,.5,.6,c.wall,{x:.45,y:.25,z:.45})); g.add(CO(.55,.35,4,c.roof,{x:.45,y:.68,z:.45,ry:Math.PI/4})); }
+    else if(e===3){ g.add(B(.8,.7,.7,c.wall,{x:.4,y:.35,z:.4})); g.add(B(.14,.7,.14,0x5a5a5a,{x:.68,y:1,z:.68}));
+      smokeEmitters.push(g); win(g,.4,.4,.76); }
+    else if(e===4){ g.add(B(.9,.6,.7,0xb8c0c8,{x:.35,y:.3,z:.35})); win(g,.35,.35,.71); }
+    else { g.add(B(.8,.9,.8,c.wall,{x:.35,y:.45,z:.35}));
+      g.add(B(.86,.08,.86,c.acc,{x:.35,y:.5,z:.35,basic:true,op:.85})); win(g,.35,.7,.76); }
+    break; }
+  case 'market':{
+    if(e===0){ g.add(C(.05,.06,1,6,0x7a5a38,{x:-.5,y:.5,z:-.4,ol:false})); g.add(C(.05,.06,1,6,0x7a5a38,{x:.5,y:.5,z:-.4,ol:false}));
+      g.add(B(1.3,.08,.9,0xd8b86a,{y:1.02,z:-.1})); g.add(B(.8,.35,.5,0xb08a5a,{y:.25,z:.2})); }
+    else if(e===1){ g.add(CO(.9,1,6,0xd85a4a,{y:.8})); g.add(C(.5,.55,.5,8,c.wall,{y:.25})); }
+    else if(e===2){ g.add(B(1,.6,.8,c.wall,{y:.3})); g.add(CO(.85,.45,4,c.roof,{y:.8,ry:Math.PI/4}));
+      g.add(S(.09,0xd43a2a,{x:-.3,y:.5,z:.44,basic:true})); g.add(S(.09,0xd43a2a,{x:.3,y:.5,z:.44,basic:true})); win(g,0,.32,.42); }
+    else if(e===3){ g.add(B(1.1,.8,.8,c.wall,{y:.4})); g.add(B(1.16,.12,.86,0xd8d0c0,{y:.84}));
+      g.add(B(1,.3,.06,0x2a5a8a,{y:.62,z:.41})); win(g,-.25,.3,.41); win(g,.25,.3,.41); }
+    else if(e===4){ g.add(B(1.2,1,.9,0xc8d8e8,{y:.5})); g.add(B(1.26,.14,.96,0x3a5a7a,{y:1.04}));
+      g.add(B(1.1,.34,.06,0xff8a3c,{y:.8,z:.46,basic:true})); win(g,0,.35,.46); }
+    else { g.add(B(1,1,.9,c.wall,{y:.5})); g.add(B(1.06,.1,.96,c.acc,{y:.6,basic:true,op:.8}));
+      g.add(_m(new THREE.TorusGeometry(.4,.05,8,18),c.acc,{y:1.35,basic:true,op:.9,anim:'spin'})); win(g,0,.28,.46); }
+    break; }
+  case 'temple':{
+    if(e===0){ g.add(C(.9,1,.18,9,0x9a9a9a,{y:.09})); g.add(B(.3,1.3,.3,0x8a6238,{y:.83}));
+      g.add(B(.7,.22,.24,0xa07548,{y:1.25})); g.add(B(.24,.5,.22,0x6a4a2a,{y:1.65})); }
+    else if(e===1){ g.add(B(1.5,.2,1.5,0xd8c89a,{y:.1})); g.add(CO(.28,1.6,4,0xe0d0a0,{y:1})); 
+      g.add(C(.12,.14,.9,6,0xe0d0a0,{x:-.55,y:.65,z:.5})); g.add(C(.12,.14,.9,6,0xe0d0a0,{x:.55,y:.65,z:.5})); }
+    else if(e===2){ g.add(B(.9,.5,.8,c.wall,{y:.25})); g.add(CO(.75,.4,4,c.roof,{y:.68,ry:Math.PI/4}));
+      g.add(B(.6,.35,.5,c.wall,{y:.78})); g.add(CO(.5,.3,4,c.roof,{y:1.08,ry:Math.PI/4})); g.add(S(.08,c.acc,{y:.4,z:.42,basic:true})); }
+    else if(e===3){ g.add(B(.9,1,.8,0xd8d0c0,{y:.5})); g.add(CO(.5,.9,4,0x8a4a3a,{y:1.45,ry:Math.PI/4}));
+      g.add(B(.06,.4,.06,0xf0e8d8,{y:2})); g.add(B(.24,.06,.06,0xf0e8d8,{y:1.95})); win(g,0,.45,.41); }
+    else if(e===4){ g.add(B(1.3,.24,1,0xd0d8e0,{y:.12})); g.add(B(.24,1.3,.8,0xe8ecf2,{y:.85}));
+      g.add(S(.28,0xffd76a,{y:1.7,basic:true})); }
+    else if(e===5){ g.add(C(.7,.8,.2,10,c.roof,{y:.1})); g.add(C(.3,.35,1.6,10,0xd8f0f8,{y:1,basic:true,op:.5}));
+      g.add(_m(new THREE.TorusGeometry(.55,.05,8,22),c.acc,{y:1.9,basic:true,op:.9,anim:'spin'})); }
+    else { g.add(C(.8,.9,.2,10,c.roof,{y:.1})); g.add(C(.06,.1,2,6,c.wall,{y:1.1}));
+      g.add(S(.3,c.acc,{y:2.2,basic:true,op:.9,anim:'bob'})); g.add(_m(new THREE.TorusGeometry(.5,.04,8,20),c.acc,{y:1.4,rx:1.2,basic:true,op:.7,anim:'spin'})); }
+    break; }
+  case 'park':{
+    g.add(B(1.7,.08,1.7,0x6ab858,{y:.04,ol:false}));
+    if(e<5){ g.add(C(.3,.35,.3,9,0xb8b0a0,{y:.2})); g.add(C(.24,.24,.1,9,0x4ab8d8,{y:.36,basic:true,op:.8}));
+      const t1=G(); t1.add(C(.06,.09,.5,6,0x7a5a38,{y:.25,ol:false})); t1.add(CO(.4,.9,7,0x4f9e3f,{y:.8})); t1.position.set(-.55,0,-.5); g.add(t1);
+      const t2=G(); t2.add(C(.06,.09,.5,6,0x7a5a38,{y:.25,ol:false})); t2.add(SP(.4,0x6abe50,{y:.75,ol:false})); t2.position.set(.55,0,.5); g.add(t2);
+      if(e===2) g.add(S(.08,0xd43a2a,{y:.9,basic:true})); }
+    else { g.add(_m(new THREE.IcosahedronGeometry(.35,0),0x8ad0e0,{y:1.1,anim:'bob',basic:e===6,op:.8}));
+      g.add(C(.5,.6,.14,9,0xd0e0e8,{y:.07,ol:false}));
+      g.add(SP(.3,0x50e0b0,{x:-.5,y:.5,z:-.4,ol:false})); g.add(SP(.24,0x60c8e0,{x:.5,y:.45,z:.45,ol:false})); }
+    break; }
+  case 'wonder':{
+    if(e===0){ for(let i=0;i<7;i++){ const a=i/7*Math.PI*2;
+        g.add(B(.4,rand(1.3,1.8),.35,0x8a8478,{x:Math.cos(a)*1.1,y:.75,z:Math.sin(a)*1.1,ry:a})); }
+      g.add(B(.5,2,.5,0x8a6238,{y:1})); g.add(B(1.1,.3,.4,0xa07548,{y:1.9})); g.add(S(.2,0xffd76a,{y:2.3,basic:true})); }
+    else if(e===1){ g.add(B(3,.2,3,0xd8c89a,{y:.1}));
+      g.add(CO(1.9,2.2,4,0xe8d8a8,{y:1.3,ry:Math.PI/4}));
+      g.add(CO(.2,1,4,0xe0d0a0,{x:1.6,y:.7,z:1.6})); g.add(CO(.2,1,4,0xe0d0a0,{x:-1.6,y:.7,z:1.6})); }
+    else if(e===2){ let w=1.7;
+      for(let f=0;f<5;f++){ g.add(B(w,.42,w,c.wall,{y:.21+f*.62}));
+        g.add(CO(w*.78,.34,4,c.roof,{y:.56+f*.62,ry:Math.PI/4}));
+        g.add(S(.07,c.acc,{x:w*.5,y:.42+f*.62,basic:true})); w*=.8; }
+      g.add(C(.04,.04,.7,6,0xd8b86a,{y:3.5,ol:false})); g.add(S(.1,0xffd76a,{y:3.9,basic:true})); }
+    else if(e===3){ g.add(B(1.1,2.6,1.1,c.wall,{y:1.3})); g.add(B(1.3,.2,1.3,0xd8d0c0,{y:2.65}));
+      g.add(C(.34,.34,.06,16,0xf0ead8,{y:2.2,z:.56,basic:true})); g.add(B(.04,.24,.04,0x2a2a2a,{y:2.2,z:.6,ol:false}));
+      g.add(CO(.7,1,4,c.roof,{y:3.2,ry:Math.PI/4})); win(g,0,.8,.56); win(g,0,1.4,.56); }
+    else if(e===4){ g.add(B(1.6,1.6,1.6,0xa8c0d8,{y:.8})); g.add(B(1.2,1.4,1.2,0xc0d4e8,{y:2.3}));
+      g.add(B(.8,1.2,.8,0xd8e4f0,{y:3.6}));
+      for(let f=0;f<7;f++){ const fl=B(f<3?1.62:f<5?1.22:.82,.06,f<3?1.62:f<5?1.22:.82,0x3a5a7a,{y:.5+f*.62,basic:true}); g.add(fl); }
+      g.add(C(.03,.03,1,6,0xd8d8d8,{y:4.7,ol:false}));
+      g.add(S(.09,0xff4a3a,{y:5.2,basic:true,anim:'blink'})); }
+    else if(e===5){ g.add(C(1.7,1.9,.3,16,c.roof,{y:.15}));
+      g.add(_m(new THREE.SphereGeometry(1.7,20,12,0,6.3,0,1.57),0x9adcf0,{y:.3,basic:true,op:.28}));
+      g.add(SP(.5,0x50e0b0,{y:.8,basic:true,op:.85,anim:'bob'}));
+      g.add(_m(new THREE.TorusGeometry(1.2,.06,8,30),c.acc,{y:.3,rx:Math.PI/2,basic:true,op:.9,anim:'spin'}));
+      const tt=G(); tt.add(C(.08,.12,.8,6,0x7a8a6a,{y:.4,ol:false})); tt.add(SP(.45,0x3fc0a0,{y:1,ol:false})); tt.position.set(.6,.3,-.4); g.add(tt); }
+    else { g.add(C(2,2.3,.35,16,0x3a4a6a,{y:.18}));
+      g.add(C(.35,.45,2.6,10,0xe8ecf4,{y:1.6})); g.add(CO(.38,.9,10,0xd04a3a,{y:3.35}));
+      for(let i=0;i<4;i++){ const a=i/4*Math.PI*2+.4;
+        g.add(B(.14,1.2,.5,0xd04a3a,{x:Math.cos(a)*.42,y:.9,z:Math.sin(a)*.42,ry:-a})); }
+      g.add(_m(new THREE.TorusGeometry(1.5,.08,8,30),c.acc,{y:1.2,rx:Math.PI/2,basic:true,op:.8,anim:'spin'}));
+      g.add(_m(new THREE.TorusGeometry(1.8,.05,8,30),c.acc,{y:2.4,rx:Math.PI/2,basic:true,op:.6,anim:'spin'}));
+      g.add(S(.12,0x8aaaff,{y:4,basic:true,anim:'blink'})); }
+    break; }
+  }
+  return g;
+}
+
+/* ================= 市民 ================= */
+const CIT_COL=[0x9a6a42,0xe8e0d0,0x4a5a8a,0x5a5a62,0x3a6ab8,0xe8f0f8,0xf0f4ff];
+const citizens=[];
+function makeCitizenMesh(e){
+  const g=G();
+  const bodyC=Math.random()<.3? pick([0xd05a4a,0x4a9e5a,0xb85ad0,0xe0a03a]) : CIT_COL[e];
+  const body=_m(new THREE.CapsuleGeometry(.16,.3,3,8),bodyC,{y:.42});
+  g.add(body);
+  g.add(SP(.15,0xf0c8a0,{y:.78}));
+  const aL=B(.07,.26,.07,bodyC,{x:-.22,y:.5,ol:false}), aR=B(.07,.26,.07,bodyC,{x:.22,y:.5,ol:false});
+  aL.geometry.translate(0,-.1,0); aR.geometry.translate(0,-.1,0); aL.position.y=.62; aR.position.y=.62;
+  g.add(aL); g.add(aR); g.userData.arms=[aL,aR];
+  if(e===1) g.add(B(.34,.05,.34,0xd8c89a,{y:.88,ol:false}));
+  if(e===2) g.add(CO(.2,.14,8,0xd8b86a,{y:.92,ol:false}));
+  if(e===3) g.add(C(.12,.13,.09,8,0x3a3a42,{y:.9,ol:false}));
+  if(e===4) g.add(B(.3,.06,.2,0x2a2a2a,{y:.86,ol:false}));
+  if(e===5) g.add(_m(new THREE.TorusGeometry(.17,.03,6,12),0x35e0e6,{y:.8,rx:Math.PI/2,basic:true,op:.9}));
+  if(e===6) g.add(SP(.19,0xbfe8ff,{y:.78,basic:true,op:.35}));
+  return g;
+}
+function spawnCitizen(x,z){
+  if(x===undefined){ for(let i=0;i<10;i++){ const a=rand(Math.PI*2),d=rand(2,R()*.8);
+    const tx=Math.cos(a)*d, tz=Math.sin(a)*d; if(landH(tx,tz)>0.55){ x=tx; z=tz; break; } }
+    x=x??0; z=z??0; }
+  const g=makeCitizenMesh(S.era);
+  g.position.set(x,landH(x,z),z);
+  islandGroup.add(g);
+  const c={g, tx:g.position.x, tz:g.position.z, sp:rand(1,1.7), state:'walk', t:rand(2), ph:rand(6.28)};
+  citizens.push(c); return c;
+}
+function newTarget(c){
+  for(let i=0;i<8;i++){
+    const a=rand(Math.PI*2), d=rand(2,R()*.85);
+    const x=Math.cos(a)*d, z=Math.sin(a)*d;
+    if(landH(x,z)>0.55){ c.tx=x; c.tz=z; return; }
+  }
+  c.tx=0; c.tz=0;
+}
+function updateCitizens(dt,t){
+  const target=Math.min(S.pop,46);
+  while(citizens.length<target) spawnCitizen();
+  while(citizens.length>target){ const c=citizens.pop(); islandGroup.remove(c.g); }
+  for(const c of citizens){
+    const g=c.g;
+    if(c.state==='walk'){
+      const dx=c.tx-g.position.x, dz=c.tz-g.position.z, d=Math.hypot(dx,dz);
+      if(d<.25){ c.state='idle'; c.t=rand(1.5,4); }
+      else { const v=c.sp*dt; g.position.x+=dx/d*v; g.position.z+=dz/d*v;
+        g.rotation.y=Math.atan2(dx,dz);
+        g.position.y=landH(g.position.x,g.position.z)+Math.abs(Math.sin(t*9+c.ph))*.07;
+        const [aL,aR]=g.userData.arms; aL.rotation.x=Math.sin(t*9+c.ph)*.6; aR.rotation.x=-Math.sin(t*9+c.ph)*.6; }
+    } else if(c.state==='idle'){
+      c.t-=dt; g.position.y=landH(g.position.x,g.position.z);
+      const [aL,aR]=g.userData.arms; aL.rotation.x*=.9; aR.rotation.x*=.9;
+      if(c.t<=0){ c.state='walk'; newTarget(c); }
+    } else if(c.state==='pray'){
+      c.t-=dt;
+      const [aL,aR]=g.userData.arms;
+      aL.rotation.x=lerp(aL.rotation.x,-2.6,.12); aR.rotation.x=lerp(aR.rotation.x,-2.6,.12);
+      if(c.t<=0){ c.state='walk'; newTarget(c); }
+    }
+  }
+}
+
+/* ================= 建造 / 指针交互 ================= */
+const highlight=new THREE.Mesh(new THREE.PlaneGeometry(CELL*.94,CELL*.94),
+  new THREE.MeshBasicMaterial({color:0x7ad0ff,transparent:true,opacity:.4,side:THREE.DoubleSide}));
+highlight.rotation.x=-Math.PI/2; highlight.position.y=.06; highlight.visible=false; scene.add(highlight);
+const ndc=new THREE.Vector2(); let pointerOn=false, hoverCell=null, hoverValid=false, downPos=null;
+const _ray=new THREE.Raycaster(), _plane=new THREE.Plane(V3(0,1,0),0), _hit=V3();
+/* 建造幽灵预览：绿=可建，红=不可建 */
+let ghost=null, ghostType=undefined;
+const GHOST_OK=new THREE.MeshBasicMaterial({color:0x7affc0,transparent:true,opacity:.42,depthWrite:false});
+const GHOST_BAD=new THREE.MeshBasicMaterial({color:0xff6a6a,transparent:true,opacity:.42,depthWrite:false});
+function refreshGhost(){
+  if(S.sel===ghostType) return;
+  ghostType=S.sel;
+  if(ghost){ scene.remove(ghost); ghost=null; }
+  if(S.sel){
+    GHOSTING=true; ghost=makeBuilding(S.sel,S.era); GHOSTING=false;
+    ghost.traverse(m=>{ if(m.isMesh){ m.material=GHOST_OK; m.castShadow=false; } });
+    scene.add(ghost);
+  }
+}
+function updateHover(){
+  refreshGhost();
+  if(!pointerOn||S.transitioning||S.over){ highlight.visible=false; hoverCell=null; if(ghost)ghost.visible=false; return; }
+  _ray.setFromCamera(ndc,camera);
+  if(!_ray.ray.intersectPlane(_plane,_hit)){ highlight.visible=false; hoverCell=null; if(ghost)ghost.visible=false; return; }
+  const cx=Math.round(_hit.x/CELL), cz=Math.round(_hit.z/CELL);
+  if(Math.abs(cx)>maxCell()||Math.abs(cz)>maxCell()){ highlight.visible=false; hoverCell=null; if(ghost)ghost.visible=false; return; }
+  hoverCell={x:cx,z:cz};
+  const def=CATALOG.find(d=>d.t===S.sel);
+  hoverValid=!!def&&walkable(cx,cz)&&!S.cells.has(cellKey(cx,cz))&&canAfford(costOf(def));
+  if(ghost){
+    ghost.visible=!!S.sel;
+    ghost.position.set(cx*CELL,cellY(cx,cz),cz*CELL);
+    const mat=hoverValid?GHOST_OK:GHOST_BAD;
+    ghost.traverse(m=>{ if(m.isMesh) m.material=mat; });
+  }
+  highlight.position.set(cx*CELL,cellY(cx,cz)+.06,cz*CELL);
+  highlight.visible=!!S.sel&&hoverValid;
+}
+renderer.domElement.addEventListener('pointermove',e=>{
+  ndc.set(e.clientX/innerWidth*2-1, -(e.clientY/innerHeight)*2+1); pointerOn=true;
+});
+renderer.domElement.addEventListener('pointerdown',e=>{ downPos=[e.clientX,e.clientY]; });
+renderer.domElement.addEventListener('pointerup',e=>{
+  if(!downPos) return;
+  const moved=Math.hypot(e.clientX-downPos[0],e.clientY-downPos[1]); downPos=null;
+  if(moved>6) return;
+  if(S.transitioning||S.over) return;
+  if(S.expandMode){ claimPatchAt(e); return; }
+  if(S.sel&&hoverCell&&hoverValid) tryBuild(hoverCell.x,hoverCell.z);
+});
+function costOf(def){
+  return def.t==='wonder'? wonderCost(S.era) : def.cost;
+}
+function canAfford(cost){ return S.wood>=cost[0]&&S.gold>=cost[1]&&S.faith>=cost[2]; }
+function pay(cost){ S.wood-=cost[0]; S.gold-=cost[1]; S.faith-=cost[2]; }
+function tryBuild(x,z){
+  const def=CATALOG.find(d=>d.t===S.sel); if(!def) return;
+  if(def.t==='wonder'&&S.wonders[S.era]){ toast('本时代的奇观已建成','🏛️'); return; }
+  const cost=costOf(def);
+  if(!canAfford(cost)){ sfx.error(); toast('资源不足！需要 '+costText(cost),'⚠️'); return; }
+  pay(cost); placeBuilding(def.t,S.era,x,z); sfx.build();
+  if(def.t==='wonder'){ S.wonders[S.era]=true; toast('奇观落成！'+def.names[S.era]+' 将永载史册','🏛️');
+    burst(V3(x*CELL,2,z*CELL),0xffd76a,60,7,1.6,-3,6); }
+  refreshHUD(); renderDock();
+}
+function placeBuilding(t,e,x,z,relic=false,slow=false){
+  const g=makeBuilding(t,e);
+  g.position.set(x*CELL,cellY(x,z)-.06,z*CELL); g.rotation.y=randi(0,3)*Math.PI/2;
+  g.add(C(1.02,1.14,.18,10,0xb8b0a0,{y:-.02,ol:false}));   // 地基平台，贴合坡地
+  g.scale.setScalar(.01); islandGroup.add(g);
+  tw(slow?2.2:.7,k=>g.scale.setScalar(Math.max(.01,k)),slow?(k=>k):easeOutBack);
+  burst(V3(x*CELL,cellY(x,z)+.4,z*CELL),0xcfc0a0,16,3,.8,-5,3);
+  S.cells.set(cellKey(x,z),{t,era:e,relic,g});
+  return g;
+}
+function costText(c){ const s=[]; if(c[0])s.push('🪵'+c[0]); if(c[1])s.push('🪙'+c[1]); if(c[2])s.push('✨'+c[2]); return s.join(' '); }
+
+/* ================= 经济循环 ================= */
+let tickAcc=0, popAcc=0, saveAcc=0, evtAcc=20, prayAcc=8;
+function econTick(){
+  const mul=eraMul(), rainB=S.buffs.rain>0?2:1;
+  let dFood=0,dWood=0,dGold=0,dFaith=0,happyT=52;
+  S.cells.forEach(b=>{
+    const m=b.relic? .5 : (1+b.era*.25);
+    switch(b.t){
+      case 'farm': dFood+=.95*m*rainB; break;
+      case 'wood': dWood+=.6*m; break;
+      case 'market': dGold+=.55*m; happyT+=2; break;
+      case 'temple': dFaith+=.24*m; happyT+=3; break;
+      case 'park': happyT+=5; break;
+      case 'wonder': happyT+=8; if(b.relic){dGold+=.35;} else {dFaith+=.15;} break;
+    }
+  });
+  dFood-=S.pop*.085;
+  S.food=Math.max(0,S.food+dFood);
+  S.wood+=dWood; S.gold+=dGold; S.faith+=dFaith;
+  happyT+= S.food>0? 8 : -16;
+  happyT-= Math.max(0,S.pop-18)*.35;
+  happyT+= S.buffs.rain>0? 3 : 0;
+  S.happy=lerp(S.happy,clamp(happyT,5,98),.06);
+  // 飘字（少量）
+  if(Math.random()<.3){ const arr=[...S.cells.values()].filter(b=>!b.relic&&(b.t==='farm'||b.t==='market'||b.t==='temple'));
+    if(arr.length){ const b=pick(arr);
+      floatText(b.g.position, b.t==='farm'?'🌾':b.t==='market'?'🪙':'✨', '#ffe9b0'); } }
+}
+function popTick(){
+  const cap=popCap();
+  if(S.pop<cap&&S.food>10&&S.happy>45){ S.pop++; S.food=Math.max(0,S.food-4); if(Math.random()<.5)toast('新生命诞生！人口+1','👶'); }
+  else if(S.food<=0&&S.pop>2&&Math.random()<.4){ S.pop--; toast('有市民因饥饿离开了','💀'); }
+}
+
+/* ================= 祈祷 ================= */
+const PRAYERS=[
+  {txt:'祈求食物 🌾', fn(){ S.food+=20; return '+20 🌾'; }},
+  {txt:'想要更多住房 🛖', fn(){ S.wood+=15; return '+15 🪵'; }},
+  {txt:'祈求平安 ✨', fn(){ S.happy=Math.min(98,S.happy+6); return '幸福+6'; }},
+  {txt:'盼望财富 🪙', fn(){ S.gold+=18; return '+18 🪙'; }},
+  {txt:'希望风调雨顺 🌧️', fn(){ S.buffs.rain=Math.max(S.buffs.rain,25); rainPts.visible=true; return '降下甘霖'; }},
+];
+let activePrayer=null;
+function spawnPrayer(){
+  if(activePrayer||!citizens.length||S.transitioning||S.over) return;
+  const c=pick(citizens); c.state='pray'; c.t=9;
+  const p=pick(PRAYERS);
+  const el=document.createElement('div'); el.className='prayer'; el.textContent=p.txt;
+  $('prayers').appendChild(el);
+  activePrayer={c,el,p,life:9};
+  el.onclick=()=>{
+    const got=p.fn(); S.faith+=6; sfx.faith();
+    burst(c.g.position.clone().add(V3(0,1.2,0)),0xffd76a,26,3,1.1,-1,4);
+    floatText(c.g.position,'+6 ✨ '+got,'#ffe9b0');
+    endPrayer();
+  };
+}
+function endPrayer(expired){
+  if(!activePrayer) return;
+  activePrayer.el.remove();
+  activePrayer.c.t=Math.min(activePrayer.c.t,.5);
+  if(expired) S.happy=Math.max(5,S.happy-3);
+  activePrayer=null;
+}
+function updatePrayer(dt){
+  if(!activePrayer) return;
+  activePrayer.life-=dt;
+  if(activePrayer.life<=0){ endPrayer(true); return; }
+  const s=toScreen(activePrayer.c.g.position.clone().add(V3(0,1.6,0)));
+  activePrayer.el.style.left=s.x+'px'; activePrayer.el.style.top=s.y+'px';
+}
+function toScreen(v){ v.project(camera); return {x:(v.x*.5+.5)*innerWidth, y:(-v.y*.5+.5)*innerHeight}; }
+function floatText(pos,txt,color='#fff'){
+  const s=toScreen(pos.clone().add(V3(0,1.8,0)));
+  const el=document.createElement('div'); el.className='floater'; el.textContent=txt; el.style.color=color;
+  el.style.left=s.x+'px'; el.style.top=s.y+'px';
+  document.body.appendChild(el); setTimeout(()=>el.remove(),1450);
+}
+function toast(txt,icon='📢'){
+  const el=document.createElement('div'); el.className='toast'; el.textContent=icon+' '+txt;
+  $('toasts').appendChild(el);
+  setTimeout(()=>{ el.classList.add('out'); setTimeout(()=>el.remove(),400); },4600);
+  while($('toasts').children.length>5) $('toasts').firstChild.remove();
+}
+
+/* ================= 随机事件 ================= */
+const EVENTS=[
+  {w:3, f(){ const g=randi(25,45); S.gold+=g; return ['远方商船来访，贸易 +' + g + ' 🪙','🚢']; }},
+  {w:2, f(){ const f=randi(8,15); S.faith+=f; return ['流星雨之夜，信仰 +'+f+' ✨','🌠']; }},
+  {w:3, f(){ const f=randi(18,30); S.food+=f; return ['鱼群洄游，食物 +'+f+' 🌾','🐟']; }},
+  {w:2, f(){ S.happy=Math.min(98,S.happy+7); return ['祥瑞之兆，幸福 +7','🦅']; }},
+  {w:2, f(){ const w=randi(15,30); S.wood+=w; S.happy=Math.max(5,S.happy-4); return ['小型地震！震出矿脉 +'+w+' 🪵，幸福 -4','🌋']; }},
+  {w:1, f(){ S.faith+=30; return ['一位伟人诞生了！信仰 +30 ✨','🌟']; }},
+  {w:2, f(){ if(S.era<1) return null; const g=randi(20,40); S.gold+=g; return ['遗迹游客络绎不绝，金币 +'+g+' 🪙','📸']; }},
+];
+function fireEvent(){
+  const pool=EVENTS.flatMap(e=>Array(e.w).fill(e));
+  for(let i=0;i<4;i++){ const r=pick(pool).f(); if(r){ toast(r[0],r[1]); sfx.pop(); return; } }
+}
+
+/* ================= 神迹 ================= */
+const GODS=[
+  {k:'rain',  icon:'🌧️', name:'赐雨',  cost:15, cd:40, tip:'农田产量×2（60秒）', f(){ S.buffs.rain=60; rainPts.visible=true; toast('神迹·赐雨！农田产量翻倍','🌧️'); }},
+  {k:'meteor',icon:'☄️', name:'流星矿', cost:25, cd:60, tip:'天降流星，砸出金币与木材', f(){ castMeteor(); }},
+  {k:'bless', icon:'✨', name:'丰收祝福', cost:20, cd:35, tip:'立即获得食物与幸福', f(){ S.food+=55; S.happy=Math.min(98,S.happy+5);
+      burst(V3(0,2,0),0xffe98a,80,10,1.8,2,7); toast('神迹·丰收！食物 +55','✨'); }},
+  {k:'haste', icon:'⏳', name:'时光加速', cost:10, cd:30, tip:'时间流速×3（25秒）', f(){ S.buffs.haste=25; toast('神迹·时光加速！','⏳'); }},
+];
+function castGod(k){
+  const g=GODS.find(x=>x.k===k); if(!g) return;
+  if(S.cds[k]>0){ sfx.error(); return; }
+  if(S.faith<g.cost){ sfx.error(); toast('信仰不足！需要 '+g.cost+' ✨','⚠️'); return; }
+  S.faith-=g.cost; S.cds[k]=g.cd; g.f(); sfx.miracle(); refreshHUD(); renderDock();
+}
+let shake=0;
+function castMeteor(){
+  const a=rand(Math.PI*2), d=rand(R()*.7);
+  const tx=Math.cos(a)*d, tz=Math.sin(a)*d;
+  const m=SP(.5,0xff8a3a,{basic:true}); m.position.set(tx+18,26,tz+14); scene.add(m);
+  sfx.boom();
+  tw(1.1,k=>{ m.position.set(lerp(tx+18,tx,k),lerp(26,.3,k),lerp(tz+14,tz,k)); },t=>t,()=>{
+    scene.remove(m);
+    burst(V3(tx,.5,tz),0xff8a3a,50,8,1.2,-4,7); burst(V3(tx,.5,tz),0xffe98a,30,5,1,-2,5);
+    shake=.6; sfx.boom();
+    const gold=randi(30,55), wood=randi(15,30);
+    S.gold+=gold; S.wood+=wood;
+    floatText(V3(tx,0,tz),'+'+gold+' 🪙 +'+wood+' 🪵','#ffd76a');
+    toast('流星坠岛！砸出矿藏','☄️');
+    refreshHUD();
+  });
+}
+
+/* ================= 时代跃迁 ================= */
+function eraReady(){
+  if(S.era>=6) return false;
+  const r=eraReq(S.era);
+  return S.pop>=r.pop && S.gold>=r.gold && S.wonders[S.era];
+}
+function eraUp(){
+  if(!eraReady()||S.transitioning) return;
+  S.transitioning=true; S.sel=null; highlight.visible=false;
+  document.body.classList.add('cine');
+  const oldGold=eraReq(S.era).gold; S.gold-=oldGold;
+  sfx.era();
+  // 时光飞逝
+  S.buffs.haste=Math.max(S.buffs.haste,0);
+  const oldScale=S.timeScale; S.timeScale=10;
+  setTimeout(()=>{
+    S.era++; setPalette(S.era);
+    morphBuildings();
+    // 市民换装
+    citizens.forEach(c=>{ const p=c.g.position.clone(); islandGroup.remove(c.g); c.g=makeCitizenMesh(S.era); c.g.position.copy(p); islandGroup.add(c.g); });
+    // 标题
+    $('era-anim-title').textContent=ERAS[S.era].name;
+    $('era-anim-sub').textContent='第 '+(S.era+1)+' 纪元 · '+ERA_TITLE_SUB[S.era];
+    $('overlay-era').classList.remove('hidden');
+    $('era-anim').classList.remove('show'); void $('era-anim').offsetWidth; $('era-anim').classList.add('show');
+    $('era-icon').textContent=ERAS[S.era].icon;
+    $('era-name').textContent=ERAS[S.era].name;
+    $('era-sub').textContent='第 '+(S.era+1)+' 纪元';
+    burst(V3(0,4,0),0xffffff,100,14,2,-1,8);
+  },2300);
+  setTimeout(()=>{ S.timeScale=oldScale; },3800);
+  setTimeout(()=>{
+    $('overlay-era').classList.add('hidden');
+    document.body.classList.remove('cine');
+    S.transitioning=false;
+    toast('文明进入'+ERAS[S.era].name+'！建筑已全面进化',ERAS[S.era].icon);
+    refreshHUD(); renderDock(); saveGame();
+  },5800);
+}
+function morphBuildings(){
+  let i=0;
+  S.cells.forEach((b,key)=>{
+    if(b.t==='wonder'){ b.relic=true; return; }  // 旧奇观保留为遗迹
+    const [x,z]=key.split(',').map(Number);
+    setTimeout(()=>{
+      burst(b.g.position.clone().add(V3(0,1,0)),0xffffff,18,4,.8,-2,4);
+      islandGroup.remove(b.g);
+      b.g=makeBuilding(b.t,S.era);
+      b.g.position.set(x*CELL,cellY(x,z)-.06,z*CELL); b.g.rotation.y=randi(0,3)*Math.PI/2;
+      b.g.add(C(1.02,1.14,.18,10,0xb8b0a0,{y:-.02,ol:false}));
+      b.g.scale.setScalar(.01); islandGroup.add(b.g);
+      tw(.6,k=>b.g.scale.setScalar(Math.max(.01,k)),easeOutBack);
+      b.era=S.era;
+      sfx.pop();
+    }, i*90);
+    i++;
+  });
+}
+
+/* ================= 终局：方舟发射 ================= */
+let launching=false, launchT=0;
+function startLaunch(){
+  if(launching) return; launching=true; S.transitioning=true;
+  document.body.classList.add('cine'); sfx.launch();
+  toast('方舟点火！全岛升空——','🚀');
+  PAL_T.night.set(0x020310); PAL_T.sky.set(0x05081c); PAL_T.fog.set(0x05081c);
+}
+function updateLaunch(dt){
+  if(!launching||S.over) return;
+  launchT+=dt; shake=.4;
+  const k=clamp(launchT/9,0,1);
+  islandGroup.position.y=easeIn(k)*120;
+  islandGroup.rotation.y+=dt*.05*k;
+  if(Math.random()<.6) burst(V3(rand(-6,6),islandGroup.position.y-8,rand(-6,6)),pick([0xff8a3a,0xffd76a,0xff5a3a]),8,5,.9,2,2);
+  if(k>=1){
+    S.over=true; document.body.classList.remove('cine');
+    $('v-stats').innerHTML=[
+      [S.pop,'最终人口'],[totalBuildings(),'建筑总数'],[Object.keys(S.wonders).length,'时代奇观'],
+      [Math.floor(S.playTime/60)+'分','文明历程']].map(x=>'<div class="v-stat"><b>'+x[0]+'</b><span>'+x[1]+'</span></div>').join('');
+    $('overlay-victory').classList.remove('hidden');
+    localStorage.removeItem('deus-isle-save');
+  }
+}
+$('btn-again').onclick=()=>{ localStorage.removeItem('deus-isle-save'); location.reload(); };
+
+/* ================= 存档 ================= */
+function saveGame(){
+  if(S.over||!S.started) return;
+  const cells=[]; S.cells.forEach((b,k)=>{ const [x,z]=k.split(',').map(Number); cells.push({x,z,t:b.t,e:b.era,r:b.relic?1:0}); });
+  localStorage.setItem('deus-isle-save',JSON.stringify({
+    era:S.era,food:S.food,wood:S.wood,gold:S.gold,faith:S.faith,pop:S.pop,happy:S.happy,
+    expand:S.expand,dayTime:S.dayTime,playTime:S.playTime,wonders:S.wonders,cells}));
+}
+function loadGame(){
+  try{ const d=JSON.parse(localStorage.getItem('deus-isle-save')); if(!d) return false;
+    Object.assign(S,{era:d.era,food:d.food,wood:d.wood,gold:d.gold,faith:d.faith,pop:d.pop,
+      happy:d.happy,expand:d.expand,dayTime:d.dayTime,playTime:d.playTime||0});
+    S.wonders=d.wonders||{};
+    setPalette(S.era); PAL_KEYS.forEach(k=>PAL[k].copy(PAL_T[k]));
+    buildIsland();
+    d.cells.forEach(c=>placeBuilding(c.t,c.e,c.x,c.z,!!c.r));
+    return true;
+  }catch(e){ return false; }
+}
+$('btn-reset').onclick=()=>{ if(confirm('确定要重置文明、清空存档吗？')){ localStorage.removeItem('deus-isle-save'); location.reload(); } };
+
+/* ================= HUD / 建造栏 ================= */
+function refreshHUD(){
+  $('r-food').textContent=Math.floor(S.food);
+  $('r-wood').textContent=Math.floor(S.wood);
+  $('r-gold').textContent=Math.floor(S.gold);
+  $('r-faith').textContent=Math.floor(S.faith);
+  $('r-pop').textContent=S.pop+'/'+popCap();
+  $('r-happy').textContent=Math.round(S.happy);
+  // 跃迁按钮
+  const btn=$('btn-eraup');
+  if(S.era<6){
+    const r=eraReq(S.era);
+    btn.innerHTML='⏫ 时代跃迁<small>🧑'+S.pop+'/'+r.pop+' · 🪙'+Math.floor(S.gold)+'/'+r.gold+' · 🏛️'+(S.wonders[S.era]?'✓':'未建')+'</small>';
+    const ok=eraReady(); btn.disabled=!ok; btn.classList.toggle('ready',ok);
+  } else if(S.wonders[6]){
+    btn.innerHTML='🚀 发射方舟<small>终极一跃 · 文明起航</small>';
+    btn.disabled=false; btn.classList.add('btn-launch'); btn.onclick=startLaunch;
+  } else {
+    btn.innerHTML='⏫ 最终纪元<small>建造「方舟发射台」以通关</small>';
+    btn.disabled=true;
+  }
+  // 扩岛按钮
+  const eb=$('btn-expand');
+  if(S.expand>=3){ eb.textContent='🏝️ 岛屿已达最大'; eb.disabled=true; }
+  else { const c=EXPAND_COST[S.expand];
+    eb.innerHTML='🏝️ 填海扩岛<small style="display:block;font-size:9px;opacity:.75">'+costText(c)+'</small>';
+    eb.disabled=!canAfford([c[0],c[1],0]); }
+  // 建造栏可负担状态
+  document.querySelectorAll('.b-card').forEach((el,i)=>{
+    const def=CATALOG[i];
+    el.classList.toggle('poor',!canAfford(costOf(def)));
+  });
+}
+function renderDock(){
+  const dock=$('build-dock'); dock.innerHTML='';
+  CATALOG.forEach(def=>{
+    const el=document.createElement('div');
+    el.className='b-card'+(S.sel===def.t?' sel':'');
+    const built=def.t==='wonder'&&S.wonders[S.era];
+    el.innerHTML='<div class="b-icon">'+def.icon+'</div><div class="b-name">'+def.names[S.era]+'</div>'+
+      '<div class="b-cost">'+(built?'已建成':costText(costOf(def)))+'</div>';
+    el.title=def.tip+'（'+CATMAP[def.t]+'）';
+    el.onclick=()=>{ sfx.click(); S.sel=S.sel===def.t?null:def.t; renderDock(); };
+    dock.appendChild(el);
+  });
+  const gd=$('god-dock'); gd.innerHTML='';
+  GODS.forEach(g=>{
+    const el=document.createElement('div');
+    el.className='god-btn'; el.id='god-'+g.k;
+    el.innerHTML='<div class="cdmask" style="transform:scaleY(0)"></div><b>'+g.icon+'</b>'+g.name+'<br>✨'+g.cost;
+    el.title=g.tip;
+    el.onclick=()=>castGod(g.k);
+    gd.appendChild(el);
+  });
+}
+function updateGodDock(){
+  GODS.forEach(g=>{
+    const el=$('god-'+g.k); if(!el) return;
+    const cd=S.cds[g.k];
+    el.classList.toggle('poor',S.faith<g.cost);
+    el.classList.toggle('cd',cd>0);
+    el.querySelector('.cdmask').style.transform='scaleY('+clamp(cd/g.cd,0,1)+')';
+  });
+}
+$('btn-expand').onclick=()=>{
+  if(S.expand>=3) return;
+  const c=EXPAND_COST[S.expand];
+  if(!canAfford([c[0],c[1],0])){ sfx.error(); toast('资源不足！需要 '+costText(c),'⚠️'); return; }
+  S.wood-=c[0]; S.gold-=c[1]; S.expand++;
+  buildIsland(); sfx.build(); shake=Math.max(shake,.3);
+  burst(V3(0,1,0),0x8ad0ff,60,14,1.4,-2,6);
+  toast('填海造陆！岛屿扩张了','🏝️'); refreshHUD(); saveGame();
+};
+$('btn-eraup').onclick=()=>eraUp();
+
+/* ================= 昼夜 / 调色板 ================= */
+const bgCol=new THREE.Color(); scene.background=bgCol;
+const _t1=new THREE.Color(), _t2=new THREE.Color();
+function smooth(a,b,x){ const t=clamp((x-a)/(b-a),0,1); return t*t*(3-2*t); }
+let dayF=1;
+function dayNight(){
+  const ang=S.dayTime*Math.PI*2;
+  const elev=Math.sin(ang);
+  dayF=smooth(-.1,.28,elev);
+  const duskF=Math.exp(-Math.pow(elev/.18,2))*(Math.cos(ang)<0?1:.3);
+  // 天空/雾
+  bgCol.copy(PAL.night).lerp(PAL.sky,dayF).lerp(PAL.dusk,duskF*.55);
+  scene.fog.color.copy(bgCol);
+  // 太阳/月亮
+  sun.position.set(Math.cos(ang)*70,Math.sin(ang)*80,36);
+  sun.intensity=.1+1.35*dayF;
+  _t1.set(0xff9a5a); _t2.copy(PAL.sun);
+  sun.color.copy(_t2).lerp(_t1,duskF*.6);
+  if(elev<-.05){ sun.color.set(0x8a9ac8); sun.intensity=.16; sun.position.set(-Math.cos(ang)*70,-Math.sin(ang)*80,36); }
+  hemi.intensity=.3+.5*dayF;
+  sunSpr.position.copy(sun.position).normalize().multiplyScalar(190); sunSpr.visible=elev>-.15;
+  moonSpr.position.set(-Math.cos(ang),-Math.sin(ang),-.3).normalize().multiplyScalar(190); moonSpr.visible=elev<.15;
+  starMat.opacity=1-dayF;
+  WIN_MAT.color.set(dayF>.5?0x46586a:0xffd77a);
+  waterMat.color.copy(PAL.water).multiplyScalar(.35+.65*dayF);
+  // 时钟图标
+  $('clock').textContent=dayF>.6?'☀️':(duskF>.5?'🌇':'🌙');
+}
+function paletteLerp(dt){
+  const k=1-Math.pow(.25,dt);
+  PAL_KEYS.forEach(key=>PAL[key].lerp(PAL_T[key],k));
+  rockMat.color.copy(PAL.rock); leafMat.color.copy(PAL.leaf);
+  recolorTerrain();
+}
+
+/* ================= 环境动效 ================= */
+function waterWave(t){
+  const p=waterGeo.attributes.position.array;
+  for(let i=0;i<p.length;i+=3){
+    p[i+2]=Math.sin(p[i]*.14+t*1.1)*.32+Math.cos(p[i+1]*.12+t*.9)*.32;
+  }
+  waterGeo.attributes.position.needsUpdate=true;
+  foamMeshes.forEach(f=>f.scale.setScalar(1+Math.sin(t*1.4)*.02));
+  foamMat.opacity=.32+Math.sin(t*1.4)*.12;
+}
+function envMove(dt,t){
+  clouds.forEach(c=>{ c.position.x+=c.userData.sp*dt; if(c.position.x>90)c.position.x=-90; });
+  const bt=t*.12;
+  boat.position.set(Math.cos(bt)*(R()+7),-1.9+Math.sin(t*1.3)*.15,Math.sin(bt)*(R()+7));
+  boat.rotation.y=-bt+Math.PI/2; boat.rotation.z=Math.sin(t*1.3)*.05;
+  birds.forEach(b=>{ const u=b.userData, a=t*u.sp+u.ph;
+    b.position.set(Math.cos(a)*u.r,u.h+Math.sin(t*2+u.ph),Math.sin(a)*u.r);
+    b.rotation.y=-a; });
+}
+function animUpdate(dt,t){
+  for(const m of animBits){
+    const k=m.userData.anim, ph=m.userData.ph||0;
+    if(k==='spin') m.rotation.y+=dt*1.4;
+    else if(k==='bob'){ if(m.userData.by===undefined)m.userData.by=m.position.y;
+      m.position.y=m.userData.by+Math.sin(t*2+ph)*.18; }
+    else if(k==='blink') m.visible=Math.sin(t*3+ph)>-.3;
+  }
+}
+let smokeAcc=0;
+function inScene(o){ let p=o; while(p.parent)p=p.parent; return p===scene; }
+function smokeUpdate(dt){
+  smokeAcc+=dt;
+  if(smokeAcc>.35){ smokeAcc=0;
+    for(const g of smokeEmitters){ if(!inScene(g)) continue;
+      burst(g.position.clone().add(V3(.4,1.5,.4)),0x8a8a8a,1,.4,2.2,1.6,.6); } }
+}
+
+/* ================= 主循环 ================= */
+const clock=new THREE.Clock();
+let hudAcc=0;
+function loop(){
+  requestAnimationFrame(loop);
+  const dt=Math.min(clock.getDelta(),.05);
+  const t=clock.elapsedTime;
+  const spd=S.timeScale*(S.buffs.haste>0?3:1);
+  const gdt=dt*spd;
+  updateTweens(dt);
+  if(S.started&&!S.over){
+    S.playTime+=gdt;
+    S.dayTime=(S.dayTime+gdt/130)%1;
+    for(const k in S.cds) S.cds[k]=Math.max(0,S.cds[k]-dt);
+    if(S.buffs.rain>0){ S.buffs.rain-=gdt; if(S.buffs.rain<=0) rainPts.visible=false; }
+    if(S.buffs.haste>0) S.buffs.haste-=dt;
+    tickAcc+=gdt; while(tickAcc>=1){ tickAcc-=1; econTick(); }
+    popAcc+=gdt; if(popAcc>=3){ popAcc=0; popTick(); }
+    evtAcc+=gdt; if(evtAcc>38){ evtAcc=0; fireEvent(); }
+    prayAcc+=gdt; if(prayAcc>13){ prayAcc=0; spawnPrayer(); }
+    saveAcc+=dt; if(saveAcc>15){ saveAcc=0; saveGame(); }
+    hudAcc+=dt; if(hudAcc>.3){ hudAcc=0; refreshHUD(); updateGodDock(); }
+    updateCitizens(gdt,t);
+    updatePrayer(dt);
+    updateLaunch(dt);
+    if(S.buffs.rain>0){
+      for(const d of rainDrops){ d.y-=d.sp*dt; if(d.y<0)resetDrop(d); }
+      for(let i=0;i<RAIN_N;i++){ rPos[i*3]=rainDrops[i].x; rPos[i*3+1]=rainDrops[i].y; rPos[i*3+2]=rainDrops[i].z; }
+      rainGeo.attributes.position.needsUpdate=true;
+    }
+  }
+  dayNight(); paletteLerp(dt); waterWave(t); envMove(dt,t); animUpdate(gdt,t);
+  updateParts(dt); smokeUpdate(dt); updateHover();
+  controls.update();
+  if(shake>0){ shake=Math.max(0,shake-dt*1.2);
+    const s=shake*14;
+    renderer.domElement.style.transform='translate('+rand(-s,s)+'px,'+rand(-s,s)+'px)';
+  } else renderer.domElement.style.transform='';
+  renderer.render(scene,camera);
+}
+
+/* ================= 初始化 ================= */
+$('btn-start').onclick=()=>{
+  ac(); sfx.era();
+  $('overlay-intro').classList.add('hidden');
+  S.started=true;
+  camera.position.set(85,60,90);
+  tw(2.6,k=>{ camera.position.set(lerp(85,30,k),lerp(60,26,k),lerp(90,34,k)); },t=>1-Math.pow(1-t,3));
+  setTimeout(()=>toast('点击下方卡片，在岛上放置建筑','👇'),2800);
+  setTimeout(()=>toast('目标：发展人口，建造奇观，让文明跃迁！','🎯'),6600);
+};
+(function init(){
+  const had=loadGame();
+  // 初始示范建筑（仅新游戏）
+  if(!had){
+    placeBuilding('house',0,-2,1); placeBuilding('house',0,2,-1);
+    placeBuilding('farm',0,1,2); placeBuilding('temple',0,-1,-2);
+    S.cells.forEach(b=>b.g.scale.setScalar(1));
+  } else {
+    S.cells.forEach(b=>b.g.scale.setScalar(1));
+    $('era-icon').textContent=ERAS[S.era].icon;
+    $('era-name').textContent=ERAS[S.era].name;
+    $('era-sub').textContent='第 '+(S.era+1)+' 纪元';
+    setTimeout(()=>toast('已读取存档，文明继续…','📜'),800);
+  }
+  tweens.length=0; // 取消初始建筑的生长动画，直接成型
+  renderDock(); refreshHUD();
+  loop();
+})();
+</script>
+</body>
+</html>

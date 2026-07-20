@@ -1,0 +1,15 @@
+{
+  "name": "deus-isle",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host"
+  },
+  "devDependencies": {
+    "vite": "^5.4.8"
+  },
+  "dependencies": {
+    "puppeteer-core": "^25.3.0"
+  }
+}
