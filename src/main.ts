@@ -253,22 +253,24 @@ function fmtPlay(sec: number): string {
 let currentIntroView: IntroView = 'main';
 function renderIntroView(view: IntroView): void {
   const el = $('intro-content');
-  // 切换时先淡出再淡入
   const isInit = el.children.length === 0;
-  const doRender = () => {
+  if (isInit) {
+    el.innerHTML = renderIntroHTML(view);
+    currentIntroView = view;
+    return;
+  }
+  // 切换：先淡出，180ms 后换内容并淡入
+  el.classList.remove('intro-fade-in');
+  el.classList.add('intro-fade-out');
+  setTimeout(() => {
     currentIntroView = view;
     el.innerHTML = renderIntroHTML(view);
     el.classList.remove('intro-fade-out');
+    // 强制 reflow 让 transition 重新触发
+    void el.offsetWidth;
     el.classList.add('intro-fade-in');
-    setTimeout(() => el.classList.remove('intro-fade-in'), 320);
-  };
-  if (isInit) {
-    doRender();
-  } else {
-    el.classList.remove('intro-fade-in');
-    el.classList.add('intro-fade-out');
-    setTimeout(doRender, 180);
-  }
+    setTimeout(() => el.classList.remove('intro-fade-in'), 340);
+  }, 180);
 }
 
 function renderIntroHTML(view: IntroView): string {
