@@ -184,12 +184,12 @@ function startGame(): void {
   S.started = true;
   // 相机从左移位置飞回正常视角
   tw(
-    2.6,
-    (k) => {
-      camera.position.set(lerp(14, 30, k), lerp(22, 26, k), lerp(34, 34, k));
-    },
-    (t) => 1 - Math.pow(1 - t, 3),
-  );
+      2.6,
+      (k) => {
+        camera.position.set(lerp(-6, 30, k), lerp(22, 26, k), lerp(34, 34, k));
+      },
+      (t) => 1 - Math.pow(1 - t, 3),
+    );
   setTimeout(() => toast('点击下方卡片，在岛上放置建筑', '👇'), 2800);
   setTimeout(() => toast('目标：发展人口，建造奇观，让文明跃迁！', '🎯'), 6600);
 }
