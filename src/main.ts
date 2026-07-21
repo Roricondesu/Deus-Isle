@@ -110,6 +110,13 @@ function loop(): void {
   controls.update();
   updateShake(dt);
   renderer.render(scene, camera);
+
+  // 过场动画/起飞流程期间隐藏整个 GUI
+  const ui = $('ui');
+  const hideUI = S.transitioning || S.over;
+  if (ui.classList.contains('ui-hidden') !== hideUI) {
+    ui.classList.toggle('ui-hidden', hideUI);
+  }
 }
 
 /* ================= 按钮绑定 ================= */

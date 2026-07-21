@@ -51,8 +51,10 @@
   #btn-eraup.btn-launch { color:#fff !important; }
 
   /* ---------- HUD 通用 ---------- */
-  #ui { position:fixed; inset:0; pointer-events:none; z-index:10; }
+  #ui { position:fixed; inset:0; pointer-events:none; z-index:10; transition:opacity .4s; }
   #ui > * { pointer-events:auto; }
+  #ui.ui-hidden { opacity:0; pointer-events:none; }
+  #ui.ui-hidden > * { pointer-events:none; }
   .glass { background:rgba(12,16,32,.55); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
     border:none; border-radius:18px;
     box-shadow:0 8px 32px rgba(0,0,0,.35); }
