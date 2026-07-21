@@ -41,6 +41,7 @@ import {
 import { S } from './state';
 import { setupAudioToggle, unlockAudio, sfx, muted as audioMuted, setMuted } from './audio';
 import { rebuildRoads } from './roads';
+import { loadLang, setLang, applyI18n, t, lang } from './i18n';
 
 /* ================= 主循环 ================= */
 const clock = new THREE.Clock();
@@ -170,8 +171,8 @@ function bindButtons(): void {
 
   // 主界面左侧按钮（事件委托，子视图切换会重新渲染）
   $('intro-content').addEventListener('click', (e) => {
-    const t = e.target as HTMLElement;
-    const act = t.dataset.act;
+    const target = e.target as HTMLElement;
+    const act = target.dataset.act;
     if (!act) return;
     if (act === 'start') startGame();
     else if (act === 'load') renderIntroView('load');
@@ -179,7 +180,7 @@ function bindButtons(): void {
     else if (act === 'about') renderIntroView('about');
     else if (act === 'back') renderIntroView('main');
     else if (act === 'load-slot') {
-      const slot = parseInt(t.dataset.slot || '0', 10);
+      const slot = parseInt(target.dataset.slot || '0', 10);
       if (loadFromSlot(slot)) {
         sfx.faith();
         $('overlay-intro').classList.add('hidden');
@@ -187,13 +188,13 @@ function bindButtons(): void {
         refreshHUD();
         renderDock();
         updateEraBadge();
-        toast('已读取存档', '✓');
+        toast(t('loaded'), '✓');
       } else {
         sfx.error();
-        toast('读取失败', '⚠');
+        toast(t('loadFailed'), '⚠');
       }
     } else if (act === 'delete-slot') {
-      const slot = parseInt(t.dataset.slot || '0', 10);
+      const slot = parseInt(target.dataset.slot || '0', 10);
       deleteSlot(slot);
       sfx.click();
       renderIntroView('load');
@@ -207,7 +208,7 @@ function bindButtons(): void {
       saveSettings();
       renderIntroView('settings');
     } else if (act === 'toggle-lang') {
-      setLang(lang === 'zh' ? 'en' : 'zh');
+      setLang(lang() === 'zh' ? 'en' : 'zh');
       saveSettings();
       applyI18n();
       renderIntroView('settings');
@@ -318,7 +319,7 @@ function renderIntroHTML(view: IntroView): string {
       </div>
       <div class="intro-row">
         <span class="intro-row-label">${t('language')}</span>
-        <button class="intro-toggle on" data-act="toggle-lang">${lang === 'zh' ? '中文' : 'EN'}</button>
+        <button class="intro-toggle on" data-act="toggle-lang">${lang() === 'zh' ? '中文' : 'EN'}</button>
       </div>
       <div class="intro-back"><button class="intro-link" data-act="back">${t('back')}</button></div>`;
   } else if (view === 'about') {
@@ -347,14 +348,16 @@ function startGame(): void {
       },
       (t) => 1 - Math.pow(1 - t, 3),
     );
-  setTimeout(() => toast('点击下方卡片，在岛上放置建筑', '👇'), 2800);
-  setTimeout(() => toast('目标：发展人口，建造奇观，让文明跃迁！', '🎯'), 6600);
+  setTimeout(() => toast(t('tipBuild'), '👇'), 2800);
+  setTimeout(() => toast(t('tipGoal'), '🎯'), 6600);
 }
 
 /* ================= 初始化 ================= */
 function init(): void {
   setupInteraction();
+  loadLang();
   loadSettings();
+  applyI18n();
   bindButtons();
 
   const had = loadGame();
