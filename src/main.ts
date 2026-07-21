@@ -29,9 +29,17 @@ import {
   autoUpgradeTick,
 } from './game';
 import { refreshHUD, renderDock, updateGodDock, toast, updateEraBadge, showSavePanel, hideSavePanel } from './hud';
-import { saveGame, loadGame, clearSave } from './save';
+import {
+  saveGame,
+  loadGame,
+  clearSave,
+  listManualSaves,
+  loadFromSlot,
+  deleteSlot,
+  SAVE_SLOTS,
+} from './save';
 import { S } from './state';
-import { setupAudioToggle, unlockAudio, sfx } from './audio';
+import { setupAudioToggle, unlockAudio, sfx, muted as audioMuted, setMuted } from './audio';
 import { rebuildRoads } from './roads';
 
 /* ================= 主循环 ================= */
@@ -160,21 +168,140 @@ function bindButtons(): void {
     location.reload();
   };
 
-  // 主界面左侧按钮
-  document.querySelectorAll<HTMLButtonElement>('.intro-link').forEach((btn) => {
-    btn.onclick = () => {
-      const act = btn.dataset.act;
-      if (act === 'start') {
-        startGame();
-      } else if (act === 'load') {
-        showSavePanel();
-      } else if (act === 'settings') {
-        toast('设置功能开发中', '⚙️');
-      } else if (act === 'about') {
-        toast('神明小岛 · Deus Isle — 文明演化模拟', ' ℹ️');
+  // 主界面左侧按钮（事件委托，子视图切换会重新渲染）
+  $('intro-content').addEventListener('click', (e) => {
+    const t = e.target as HTMLElement;
+    const act = t.dataset.act;
+    if (!act) return;
+    if (act === 'start') startGame();
+    else if (act === 'load') renderIntroView('load');
+    else if (act === 'settings') renderIntroView('settings');
+    else if (act === 'about') renderIntroView('about');
+    else if (act === 'back') renderIntroView('main');
+    else if (act === 'load-slot') {
+      const slot = parseInt(t.dataset.slot || '0', 10);
+      if (loadFromSlot(slot)) {
+        sfx.faith();
+        $('overlay-intro').classList.add('hidden');
+        S.started = true;
+        refreshHUD();
+        renderDock();
+        updateEraBadge();
+        toast('已读取存档', '✓');
+      } else {
+        sfx.error();
+        toast('读取失败', '⚠');
       }
-    };
+    } else if (act === 'delete-slot') {
+      const slot = parseInt(t.dataset.slot || '0', 10);
+      deleteSlot(slot);
+      sfx.click();
+      renderIntroView('load');
+    } else if (act === 'toggle-sound') {
+      setMuted(audioMuted ? false : true);
+      saveSettings();
+      renderIntroView('settings');
+    } else if (act === 'toggle-rotate') {
+      settings.autoRotate = !settings.autoRotate;
+      controls.autoRotate = settings.autoRotate;
+      saveSettings();
+      renderIntroView('settings');
+    }
   });
+
+  // 初始渲染主菜单
+  renderIntroView('main');
+}
+
+/* ================= 主界面子视图渲染 ================= */
+type IntroView = 'main' | 'load' | 'settings' | 'about';
+
+interface Settings {
+  autoRotate: boolean;
+}
+const SETTINGS_KEY = 'deus-isle-settings';
+const settings: Settings = { autoRotate: true };
+function loadSettings(): void {
+  try {
+    const raw = localStorage.getItem(SETTINGS_KEY);
+    if (raw) Object.assign(settings, JSON.parse(raw));
+  } catch (e) { /* ignore */ }
+  controls.autoRotate = settings.autoRotate;
+}
+function saveSettings(): void {
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+}
+
+function fmtTs(ts: number): string {
+  if (!ts) return '—';
+  const d = new Date(ts);
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${d.getMonth() + 1}/${d.getDate()} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+function fmtPlay(sec: number): string {
+  const m = Math.floor((sec || 0) / 60);
+  const h = Math.floor(m / 60);
+  return h > 0 ? `${h}h${m % 60}m` : `${m}m`;
+}
+
+function renderIntroView(view: IntroView): void {
+  const el = $('intro-content');
+  if (view === 'main') {
+    el.innerHTML = `
+      <nav class="intro-menu">
+        <button class="intro-link" data-act="start">开始游戏</button>
+        <button class="intro-link" data-act="load">读取存档</button>
+        <button class="intro-link" data-act="settings">设置</button>
+        <button class="intro-link" data-act="about">关于</button>
+      </nav>`;
+  } else if (view === 'load') {
+    const slots = listManualSaves();
+    let html = `<div class="intro-section-title">存档列表</div>`;
+    slots.forEach((d, i) => {
+      if (d) {
+        const eraName = ERAS[d.era]?.name || '未知';
+        html += `
+          <div class="intro-slot">
+            <div class="intro-slot-info">
+              槽位 ${i + 1} · ${eraName} · ${d.pop}人
+              <small>${fmtPlay(d.playTime)} · ${fmtTs(d.savedAt)}</small>
+            </div>
+            <div class="intro-slot-actions">
+              <button class="intro-mini" data-act="load-slot" data-slot="${i}">读取</button>
+              <button class="intro-mini danger" data-act="delete-slot" data-slot="${i}">删除</button>
+            </div>
+          </div>`;
+      } else {
+        html += `
+          <div class="intro-slot">
+            <div class="intro-slot-info">槽位 ${i + 1} · 空<small>尚未保存</small></div>
+          </div>`;
+      }
+    });
+    html += `<div class="intro-back"><button class="intro-link" data-act="back">返回</button></div>`;
+    el.innerHTML = html;
+  } else if (view === 'settings') {
+    el.innerHTML = `
+      <div class="intro-section-title">设置</div>
+      <div class="intro-row">
+        <span class="intro-row-label">音效</span>
+        <button class="intro-toggle ${audioMuted ? '' : 'on'}" data-act="toggle-sound">${audioMuted ? '关' : '开'}</button>
+      </div>
+      <div class="intro-row">
+        <span class="intro-row-label">镜头自动旋转</span>
+        <button class="intro-toggle ${settings.autoRotate ? 'on' : ''}" data-act="toggle-rotate">${settings.autoRotate ? '开' : '关'}</button>
+      </div>
+      <div class="intro-back"><button class="intro-link" data-act="back">返回</button></div>`;
+  } else if (view === 'about') {
+    el.innerHTML = `
+      <div class="intro-section-title">关于</div>
+      <div class="intro-about">
+        <p>《神明小岛》是一款 3D 文明演化模拟游戏。你扮演一座小岛的守护神，引导子民从远古篝火一路走向星辰大海。</p>
+        <p>历经七个纪元，建造奇观，回应祈祷，施展神迹，最终发射方舟飞向宇宙。</p>
+        <div class="ver">DEUS ISLE · v1.0</div>
+      </div>
+      <div class="intro-back"><button class="intro-link" data-act="back">返回</button></div>`;
+  }
 }
 
 function startGame(): void {
@@ -197,6 +324,7 @@ function startGame(): void {
 /* ================= 初始化 ================= */
 function init(): void {
   setupInteraction();
+  loadSettings();
   bindButtons();
 
   const had = loadGame();

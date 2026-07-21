@@ -4,6 +4,9 @@ import { icon, IC } from './icon';
 /* ================= 极简 WebAudio 音效合成 ================= */
 let AC: AudioContext | null = null;
 export let muted = false;
+export function setMuted(v: boolean): void {
+  muted = v;
+}
 
 function ac(): AudioContext {
   if (!AC) AC = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -79,7 +82,7 @@ export const sfx = {
 export function setupAudioToggle(): void {
   const btn = $('btn-mute');
   btn.onclick = () => {
-    muted = !muted;
+    setMuted(!muted);
     btn.innerHTML = muted
       ? icon(IC.soundOff)
       : icon(IC.soundOn);

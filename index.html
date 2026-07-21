@@ -169,6 +169,31 @@
   .intro-link::before { content:""; display:inline-block; width:0; height:1px; margin-right:0;
     background:#fff; vertical-align:middle; transition:all .25s; }
   .intro-link:hover::before { width:18px; margin-right:10px; }
+  /* 子视图：存档列表 / 设置 / 关于 */
+  .intro-section-title { color:rgba(255,255,255,.5); font-size:13px; letter-spacing:0.4em;
+    font-weight:500; margin-bottom:18px; }
+  .intro-slot { display:flex; align-items:center; justify-content:space-between; gap:16px;
+    padding:8px 4px; border-bottom:1px solid rgba(255,255,255,.08); min-width:280px; }
+  .intro-slot-info { color:rgba(255,255,255,.85); font-size:15px; letter-spacing:0.05em; line-height:1.5; }
+  .intro-slot-info small { display:block; color:rgba(255,255,255,.4); font-size:11px; margin-top:2px; letter-spacing:0.1em; }
+  .intro-slot-actions { display:flex; gap:12px; flex-shrink:0; }
+  .intro-mini { background:none; border:none; cursor:pointer; padding:4px 6px;
+    color:rgba(255,255,255,.6); font-family:inherit; font-size:13px; letter-spacing:0.1em;
+    transition:color .2s; }
+  .intro-mini:hover { color:#fff; }
+  .intro-mini.danger:hover { color:#ff8888; }
+  .intro-row { display:flex; align-items:center; justify-content:space-between; gap:24px;
+    padding:12px 4px; border-bottom:1px solid rgba(255,255,255,.08); min-width:300px; }
+  .intro-row-label { color:rgba(255,255,255,.85); font-size:15px; letter-spacing:0.1em; }
+  .intro-toggle { background:none; border:none; cursor:pointer; padding:4px 6px;
+    color:rgba(255,255,255,.6); font-family:inherit; font-size:14px; letter-spacing:0.2em;
+    transition:color .2s; }
+  .intro-toggle.on { color:#fff; }
+  .intro-about { color:rgba(255,255,255,.7); font-size:14px; line-height:2.1; letter-spacing:0.08em;
+    max-width:380px; }
+  .intro-about p { margin:0 0 14px; }
+  .intro-about .ver { color:rgba(255,255,255,.4); font-size:11px; letter-spacing:0.3em; margin-top:24px; }
+  .intro-back { margin-top:32px; }
 
   #overlay-era { pointer-events:none; background:radial-gradient(ellipse at center,rgba(20,26,50,.25),rgba(5,8,18,.75)); }
   #era-anim { text-align:center; opacity:0; }
@@ -284,12 +309,7 @@
   <div class="intro-panel">
     <h1 class="intro-en">DEUS ISLE</h1>
     <div class="intro-zh">神明小岛</div>
-    <nav class="intro-menu">
-      <button class="intro-link" data-act="start">开始游戏</button>
-      <button class="intro-link" data-act="load">读取存档</button>
-      <button class="intro-link" data-act="settings">设置</button>
-      <button class="intro-link" data-act="about">关于</button>
-    </nav>
+    <div class="intro-content" id="intro-content"></div>
   </div>
 </div>
 
