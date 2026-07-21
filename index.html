@@ -61,36 +61,41 @@
 
   /* ---------- 顶栏 ---------- */
   #topbar { position:absolute; top:12px; left:50%; transform:translateX(-50%);
-    display:flex; align-items:center; gap:8px; padding:8px 14px; max-width:96vw; flex-wrap:wrap; justify-content:center; }
-  #era-badge { display:flex; align-items:center; gap:8px; padding-right:10px; border-right:none; }
+    display:flex; align-items:center; gap:6px; padding:0; max-width:96vw; flex-wrap:wrap; justify-content:center; }
+  #era-badge { display:flex; align-items:center; gap:8px; padding:6px 12px; border-radius:999px;
+    background:rgba(12,16,32,.5); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); }
   #era-icon { display:inline-flex; align-items:center; justify-content:center; width:26px; height:26px; }
   #era-name { color:#ffe9b0; font-weight:700; font-size:14px; letter-spacing:1px; white-space:nowrap; }
   #era-sub { color:rgba(255,255,255,.5); font-size:10px; letter-spacing:2px; }
   .res { display:flex; align-items:center; gap:4px; color:#fff; font-size:13px; font-weight:600;
-    padding:4px 9px; border-radius:999px; background:rgba(255,255,255,.04); white-space:nowrap; }
+    padding:6px 10px; border-radius:999px; background:rgba(12,16,32,.5);
+    backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); white-space:nowrap; }
   .res span { min-width:24px; text-align:right; font-variant-numeric:tabular-nums; }
   .res.flash { animation:resFlash .5s; }
-  @keyframes resFlash { 0%{ background:rgba(255,220,120,.55);} 100%{ background:rgba(255,255,255,.04);} }
-  #clock { display:inline-flex; align-items:center; justify-content:center; width:34px; height:26px; }
+  @keyframes resFlash { 0%{ background:rgba(255,220,120,.55);} 100%{ background:rgba(12,16,32,.5);} }
+  #clock { display:inline-flex; align-items:center; justify-content:center; width:34px; height:34px;
+    border-radius:999px; background:rgba(12,16,32,.5); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); }
   .icon-btn { width:34px; height:34px; border-radius:999px; border:none;
-    background:rgba(255,255,255,.06); color:#fff; font-size:16px; cursor:pointer; transition:.2s;
+    background:rgba(12,16,32,.5); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+    color:#fff; font-size:16px; cursor:pointer; transition:.2s;
     display:inline-flex; align-items:center; justify-content:center; }
   .icon-btn:hover { background:rgba(255,255,255,.18); transform:translateY(-1px); }
 
   /* ---------- 底栏 ---------- */
   #bottombar { position:absolute; left:50%; transform:translateX(-50%); bottom:12px;
     display:flex; gap:8px; align-items:stretch; max-width:97vw; }
-  #build-dock { display:flex; gap:6px; padding:8px; align-items:center; overflow-x:auto; max-width:62vw; }
+  #build-dock { display:flex; gap:6px; padding:0; align-items:center; overflow-x:auto; max-width:62vw; }
   #build-dock::-webkit-scrollbar { height:4px; } #build-dock::-webkit-scrollbar-thumb { background:rgba(255,255,255,.18); border-radius:2px; }
   .b-card { flex:0 0 auto; width:72px; padding:8px 4px 6px; border-radius:14px; text-align:center; cursor:pointer;
-    background:transparent; border:none; transition:.18s; position:relative; }
-  .b-card:hover { background:rgba(255,255,255,.1); transform:translateY(-3px); }
-  .b-card.sel { background:rgba(120,200,255,.22); box-shadow:0 0 14px rgba(120,200,255,.45); }
+    background:rgba(12,16,32,.5); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+    border:none; transition:.18s; position:relative; }
+  .b-card:hover { background:rgba(255,255,255,.16); transform:translateY(-3px); }
+  .b-card.sel { background:rgba(120,200,255,.28); box-shadow:0 0 14px rgba(120,200,255,.5); }
   .b-card.poor { opacity:.38; filter:grayscale(.6); }
   .b-icon { font-size:24px; display:flex; align-items:center; justify-content:center; }
   .b-name { color:#fff; font-size:11px; font-weight:600; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .b-cost { color:#ffd98a; font-size:9px; margin-top:1px; white-space:nowrap; }
-  #side-dock { display:flex; flex-direction:column; gap:8px; padding:8px; }
+  #side-dock { display:flex; flex-direction:column; gap:8px; padding:0; }
   #god-dock { display:flex; gap:6px; }
   .god-btn { flex:1; min-width:52px; padding:6px 2px; border-radius:12px; border:none;
     background:linear-gradient(160deg,rgba(120,80,220,.32),rgba(60,30,120,.32)); color:#e8dcff;
@@ -219,7 +224,7 @@
 <div id="stage"></div>
 
 <div id="ui">
-  <div id="topbar" class="glass">
+  <div id="topbar">
     <div id="era-badge">
       <span id="era-icon"><iconify-icon icon="mdi:fire"></iconify-icon></span>
       <div><div id="era-name">远古时期</div><div id="era-sub">第 1 纪元</div></div>
@@ -252,8 +257,8 @@
   <div id="prayers"></div>
 
   <div id="bottombar">
-    <div id="build-dock" class="glass"></div>
-    <div id="side-dock" class="glass">
+    <div id="build-dock"></div>
+    <div id="side-dock">
       <div id="god-dock"></div>
       <button class="act-btn" id="btn-expand"><iconify-icon icon="mdi:island"></iconify-icon>填海扩岛</button>
       <button class="act-btn" id="btn-eraup" disabled><iconify-icon icon="mdi:arrow-up-bold"></iconify-icon>时代跃迁</button>
