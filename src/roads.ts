@@ -47,6 +47,17 @@ const ROAD_STYLES: RoadStyle[] = [
 
 let roadGroup: THREE.Group | null = null;
 
+/* 路网数据：供市民寻路使用
+   每条 MST 边存为 from→to 的路径点序列（已 smooth，y 已处理贴地/桥面）
+   roadVersion 每次重建自增，市民据此失效旧路径 */
+export interface RoadEdge {
+  from: string;
+  to: string;
+  path: THREE.Vector3[];
+}
+export const roadEdges: RoadEdge[] = [];
+export let roadVersion = 0;
+
 function buildingPositions(): { x: number; z: number; key: string }[] {
   const arr: { x: number; z: number; key: string }[] = [];
   S.cells.forEach((b: CellEntry, key: string) => {
@@ -322,10 +333,18 @@ export function rebuildRoads(): void {
     });
     roadGroup.remove(child);
   }
+  // 清空路网数据
+  roadEdges.length = 0;
   const pts = buildingPositions();
-  if (pts.length < 2) return;
+  if (pts.length < 2) {
+    roadVersion++;
+    return;
+  }
   const edges = buildMST(pts);
-  if (!edges.length) return;
+  if (!edges.length) {
+    roadVersion++;
+    return;
+  }
   const style = ROAD_STYLES[Math.min(S.era, ROAD_STYLES.length - 1)];
   const roadMat = new THREE.MeshStandardMaterial({
     color: style.color,
@@ -359,7 +378,11 @@ export function rebuildRoads(): void {
       const bridge = buildBridge(smooth, s, e, style);
       roadGroup.add(bridge);
     }
+    // 记录路网边（供市民寻路）：克隆路径点，避免被 dispose
+    const path = smooth.map((seg) => seg.pos.clone());
+    roadEdges.push({ from: pa.key, to: pb.key, path });
   }
+  roadVersion++;
 }
 
 /* 延迟重建（防抖）：批量操作时只重建一次 */
