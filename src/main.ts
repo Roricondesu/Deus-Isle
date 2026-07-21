@@ -206,6 +206,11 @@ function bindButtons(): void {
       controls.autoRotate = settings.autoRotate;
       saveSettings();
       renderIntroView('settings');
+    } else if (act === 'toggle-lang') {
+      setLang(lang === 'zh' ? 'en' : 'zh');
+      saveSettings();
+      applyI18n();
+      renderIntroView('settings');
     }
   });
 
@@ -244,64 +249,89 @@ function fmtPlay(sec: number): string {
   return h > 0 ? `${h}h${m % 60}m` : `${m}m`;
 }
 
+let currentIntroView: IntroView = 'main';
 function renderIntroView(view: IntroView): void {
   const el = $('intro-content');
+  // 切换时先淡出再淡入
+  const isInit = el.children.length === 0;
+  const doRender = () => {
+    currentIntroView = view;
+    el.innerHTML = renderIntroHTML(view);
+    el.classList.remove('intro-fade-out');
+    el.classList.add('intro-fade-in');
+    setTimeout(() => el.classList.remove('intro-fade-in'), 320);
+  };
+  if (isInit) {
+    doRender();
+  } else {
+    el.classList.remove('intro-fade-in');
+    el.classList.add('intro-fade-out');
+    setTimeout(doRender, 180);
+  }
+}
+
+function renderIntroHTML(view: IntroView): string {
   if (view === 'main') {
-    el.innerHTML = `
+    return `
       <nav class="intro-menu">
-        <button class="intro-link" data-act="start">开始游戏</button>
-        <button class="intro-link" data-act="load">读取存档</button>
-        <button class="intro-link" data-act="settings">设置</button>
-        <button class="intro-link" data-act="about">关于</button>
+        <button class="intro-link" data-act="start">${t('start')}</button>
+        <button class="intro-link" data-act="load">${t('loadSave')}</button>
+        <button class="intro-link" data-act="settings">${t('settings')}</button>
+        <button class="intro-link" data-act="about">${t('about')}</button>
       </nav>`;
   } else if (view === 'load') {
     const slots = listManualSaves();
-    let html = `<div class="intro-section-title">存档列表</div>`;
+    let html = `<div class="intro-section-title">${t('saveList')}</div>`;
     slots.forEach((d, i) => {
       if (d) {
-        const eraName = ERAS[d.era]?.name || '未知';
+        const eraName = ERAS[d.era]?.name || '—';
         html += `
           <div class="intro-slot">
             <div class="intro-slot-info">
-              槽位 ${i + 1} · ${eraName} · ${d.pop}人
+              ${t('slot')} ${i + 1} · ${eraName} · ${d.pop}${t('people')}
               <small>${fmtPlay(d.playTime)} · ${fmtTs(d.savedAt)}</small>
             </div>
             <div class="intro-slot-actions">
-              <button class="intro-mini" data-act="load-slot" data-slot="${i}">读取</button>
-              <button class="intro-mini danger" data-act="delete-slot" data-slot="${i}">删除</button>
+              <button class="intro-mini" data-act="load-slot" data-slot="${i}">${t('load')}</button>
+              <button class="intro-mini danger" data-act="delete-slot" data-slot="${i}">${t('delete')}</button>
             </div>
           </div>`;
       } else {
         html += `
           <div class="intro-slot">
-            <div class="intro-slot-info">槽位 ${i + 1} · 空<small>尚未保存</small></div>
+            <div class="intro-slot-info">${t('slot')} ${i + 1} · ${t('empty')}<small>${t('notSaved')}</small></div>
           </div>`;
       }
     });
-    html += `<div class="intro-back"><button class="intro-link" data-act="back">返回</button></div>`;
-    el.innerHTML = html;
+    html += `<div class="intro-back"><button class="intro-link" data-act="back">${t('back')}</button></div>`;
+    return html;
   } else if (view === 'settings') {
-    el.innerHTML = `
-      <div class="intro-section-title">设置</div>
+    return `
+      <div class="intro-section-title">${t('settings')}</div>
       <div class="intro-row">
-        <span class="intro-row-label">音效</span>
-        <button class="intro-toggle ${audioMuted ? '' : 'on'}" data-act="toggle-sound">${audioMuted ? '关' : '开'}</button>
+        <span class="intro-row-label">${t('sound')}</span>
+        <button class="intro-toggle ${audioMuted ? '' : 'on'}" data-act="toggle-sound">${audioMuted ? t('off') : t('on')}</button>
       </div>
       <div class="intro-row">
-        <span class="intro-row-label">镜头自动旋转</span>
-        <button class="intro-toggle ${settings.autoRotate ? 'on' : ''}" data-act="toggle-rotate">${settings.autoRotate ? '开' : '关'}</button>
+        <span class="intro-row-label">${t('autoRotate')}</span>
+        <button class="intro-toggle ${settings.autoRotate ? 'on' : ''}" data-act="toggle-rotate">${settings.autoRotate ? t('on') : t('off')}</button>
       </div>
-      <div class="intro-back"><button class="intro-link" data-act="back">返回</button></div>`;
+      <div class="intro-row">
+        <span class="intro-row-label">${t('language')}</span>
+        <button class="intro-toggle on" data-act="toggle-lang">${lang === 'zh' ? '中文' : 'EN'}</button>
+      </div>
+      <div class="intro-back"><button class="intro-link" data-act="back">${t('back')}</button></div>`;
   } else if (view === 'about') {
-    el.innerHTML = `
-      <div class="intro-section-title">关于</div>
+    return `
+      <div class="intro-section-title">${t('about')}</div>
       <div class="intro-about">
-        <p>《神明小岛》是一款 3D 文明演化模拟游戏。你扮演一座小岛的守护神，引导子民从远古篝火一路走向星辰大海。</p>
-        <p>历经七个纪元，建造奇观，回应祈祷，施展神迹，最终发射方舟飞向宇宙。</p>
+        <p>${t('aboutP1')}</p>
+        <p>${t('aboutP2')}</p>
         <div class="ver">DEUS ISLE · v1.0</div>
       </div>
-      <div class="intro-back"><button class="intro-link" data-act="back">返回</button></div>`;
+      <div class="intro-back"><button class="intro-link" data-act="back">${t('back')}</button></div>`;
   }
+  return '';
 }
 
 function startGame(): void {
@@ -313,7 +343,7 @@ function startGame(): void {
   tw(
       2.6,
       (k) => {
-        camera.position.set(lerp(-6, 30, k), lerp(22, 26, k), lerp(34, 34, k));
+        camera.position.set(lerp(-40, 30, k), lerp(22, 26, k), lerp(34, 34, k));
       },
       (t) => 1 - Math.pow(1 - t, 3),
     );

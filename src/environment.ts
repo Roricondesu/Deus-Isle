@@ -41,8 +41,8 @@ export const scene = new THREE.Scene();
 scene.fog = new THREE.Fog(0xaee2ff, 60, 220);
 
 export const camera = new THREE.PerspectiveCamera(46, innerWidth / innerHeight, 0.1, 600);
-// 初始主界面：相机左移，岛屿偏到画面右侧，给左侧标题留空间
-camera.position.set(-6, 22, 34);
+// 初始主界面：相机大幅左移，岛屿偏到画面右侧，给左侧标题留足空间
+camera.position.set(-40, 22, 34);
 
 export const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
