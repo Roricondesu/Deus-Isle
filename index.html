@@ -146,13 +146,21 @@
     flex-direction:column; background:radial-gradient(ellipse at center,rgba(10,14,30,.55),rgba(5,8,18,.92));
     transition:opacity .6s; }
   .overlay.hidden { opacity:0; pointer-events:none; }
-  #overlay-intro h1 { font-size:min(64px,11vw); color:#ffe9b0; letter-spacing:14px; font-weight:900;
-    text-shadow:0 0 40px rgba(255,200,90,.55), 0 4px 0 rgba(120,70,0,.4); animation:titleFloat 3s ease-in-out infinite;
-    display:flex; align-items:center; }
-  @keyframes titleFloat { 0%,100%{ transform:translateY(0);} 50%{ transform:translateY(-10px);} }
-  #overlay-intro .sub { color:#8ad0ff; letter-spacing:8px; font-size:14px; margin-top:6px; }
-  #overlay-intro .desc { color:rgba(255,255,255,.82); font-size:15px; margin:26px 0 8px; text-align:center; line-height:1.9; }
-  #overlay-intro .tips { color:rgba(255,255,255,.45); font-size:12px; line-height:2; text-align:center; margin-bottom:28px; }
+
+  /* 初始主界面：左侧布局，中文小标题 + 英文大标题 */
+  #overlay-intro { align-items:flex-start; justify-content:center; padding:0 8vw; }
+  .intro-panel { display:flex; flex-direction:column; align-items:flex-start; max-width:520px; }
+  .intro-zh { color:#8ad0ff; font-size:18px; letter-spacing:10px; font-weight:600;
+    margin-bottom:6px; text-shadow:0 0 18px rgba(120,200,255,.45); }
+  .intro-en { font-size:min(96px,13vw); color:#ffe9b0; letter-spacing:8px; font-weight:900;
+    margin:0; line-height:1; text-shadow:0 0 50px rgba(255,200,90,.6), 0 4px 0 rgba(120,70,0,.4);
+    animation:titleFloat 3s ease-in-out infinite; }
+  @keyframes titleFloat { 0%,100%{ transform:translateY(0);} 50%{ transform:translateY(-8px);} }
+  .intro-tag { color:rgba(255,255,255,.5); letter-spacing:8px; font-size:13px; margin-top:14px; }
+  .intro-desc { color:rgba(255,255,255,.82); font-size:15px; margin:30px 0 22px; line-height:1.9; text-align:left; }
+  .intro-tips { color:rgba(255,255,255,.45); font-size:12px; line-height:2.2; margin-bottom:36px; }
+  .intro-tips iconify-icon { width:14px; height:14px; vertical-align:-0.15em; margin-right:8px; color:#ffd98a; }
+  #overlay-intro .big-btn { align-self:flex-start; padding:14px 42px; font-size:17px; letter-spacing:4px; }
   .big-btn { border:none; border-radius:999px; padding:16px 54px; font-size:19px; font-weight:900; letter-spacing:6px;
     color:#24160a; background:linear-gradient(135deg,#ffe9a0,#ffb84d); cursor:pointer; transition:.25s;
     box-shadow:0 0 34px rgba(255,190,80,.45); display:inline-flex; align-items:center; justify-content:center; }
@@ -269,13 +277,18 @@
 <div class="lb top"></div><div class="lb bot"></div>
 
 <div class="overlay" id="overlay-intro">
-  <h1>神明小岛</h1>
-  <div class="sub">DEUS ISLE · 文 明 演 化 模 拟</div>
-  <div class="desc">你是这座小岛的上帝。<br>引导你的子民，从远古篝火，一路走向星辰大海。</div>
-  <div class="tips"><iconify-icon icon="mdi:mouse"></iconify-icon>拖拽旋转视角 · 滚轮缩放 · 点击下方卡片后在岛上建造<br>
-    <iconify-icon icon="mdi:chat"></iconify-icon>点击祈祷气泡回应子民 · <iconify-icon icon="mdi:star-shooting"></iconify-icon>用神迹帮助他们（或捣乱）<br>
-    <iconify-icon icon="mdi:bank"></iconify-icon>每个时代建造一座奇观，集齐条件即可让文明跃迁</div>
-  <button class="big-btn" id="btn-start"><iconify-icon icon="mdi:star-shooting"></iconify-icon>开始创造</button>
+  <div class="intro-panel">
+    <div class="intro-zh">神明小岛</div>
+    <h1 class="intro-en">DEUS ISLE</h1>
+    <div class="intro-tag">文 明 演 化 模 拟</div>
+    <div class="intro-desc">你是这座小岛的上帝。<br>引导你的子民，从远古篝火，一路走向星辰大海。</div>
+    <div class="intro-tips">
+      <div><iconify-icon icon="mdi:mouse"></iconify-icon>拖拽旋转视角 · 滚轮缩放 · 点击下方卡片在岛上建造</div>
+      <div><iconify-icon icon="mdi:chat"></iconify-icon>点击祈祷气泡回应子民 · <iconify-icon icon="mdi:star-shooting"></iconify-icon>用神迹帮助他们</div>
+      <div><iconify-icon icon="mdi:bank"></iconify-icon>每个时代建造一座奇观，集齐条件即可让文明跃迁</div>
+    </div>
+    <button class="big-btn" id="btn-start"><iconify-icon icon="mdi:star-shooting"></iconify-icon>开始创造</button>
+  </div>
 </div>
 
 <div class="overlay hidden" id="overlay-era">

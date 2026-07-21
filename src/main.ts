@@ -111,9 +111,9 @@ function loop(): void {
   updateShake(dt);
   renderer.render(scene, camera);
 
-  // 过场动画/起飞流程期间隐藏整个 GUI
+  // 过场动画/起飞流程/初始主界面期间隐藏整个 GUI
   const ui = $('ui');
-  const hideUI = S.transitioning || S.over;
+  const hideUI = !S.started || S.transitioning || S.over;
   if (ui.classList.contains('ui-hidden') !== hideUI) {
     ui.classList.toggle('ui-hidden', hideUI);
   }
@@ -166,11 +166,11 @@ function bindButtons(): void {
     sfx.era();
     $('overlay-intro').classList.add('hidden');
     S.started = true;
-    camera.position.set(85, 60, 90);
+    // 相机从左移位置飞回正常视角
     tw(
       2.6,
       (k) => {
-        camera.position.set(lerp(85, 30, k), lerp(60, 26, k), lerp(90, 34, k));
+        camera.position.set(lerp(14, 30, k), lerp(22, 26, k), lerp(34, 34, k));
       },
       (t) => 1 - Math.pow(1 - t, 3),
     );
