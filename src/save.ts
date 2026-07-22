@@ -1,4 +1,4 @@
-import { S, SEED, PATCHES, setSeed, setPatches, type Patch, type Crisis, type TaskState } from './state';
+import { S, SEED, PATCHES, setSeed, setPatches, type Patch, type Crisis, type TaskState, type HistorySample } from './state';
 import { setPaletteSync } from './environment';
 import { buildIsland } from './environment';
 import { placeBuilding } from './interaction';
@@ -33,6 +33,7 @@ interface SaveData {
   skills: string[];
   tasks: TaskState;
   upgrades?: number;
+  history?: HistorySample[];
   // 手动存档额外字段
   savedAt?: number;     // 保存时间戳
   note?: string;        // 备注（自动生成）
@@ -80,6 +81,7 @@ function collectSave(): SaveData {
     skills: S.skills,
     tasks: { list: S.tasks.list.map((t) => ({ ...t })), lastRefresh: S.tasks.lastRefresh },
     upgrades: S.upgrades,
+    history: S.history.slice(),
     savedAt: Date.now(),
   };
 }
@@ -107,6 +109,7 @@ function applySave(d: SaveData): void {
     ? { list: d.tasks.list.map((t) => ({ ...t })), lastRefresh: d.tasks.lastRefresh || 0 }
     : { list: [], lastRefresh: 0 };
   S.upgrades = typeof d.upgrades === 'number' ? d.upgrades : 0;
+  S.history = Array.isArray(d.history) ? d.history.map((h) => ({ ...h })) : [];
   // 还原地形种子和填海地块
   if (typeof d.seed === 'number') setSeed(d.seed);
   if (Array.isArray(d.patches)) setPatches(d.patches.map((p) => ({ ...p })));

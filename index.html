@@ -296,6 +296,9 @@
   .v-stat { text-align:center; }
   .v-stat b { display:block; font-size:32px; color:var(--text); font-weight:300; }
   .v-stat span { color:var(--text-faint); font-size:11px; letter-spacing:2px; text-transform:uppercase; }
+  .v-chart { width:min(560px,92vw); margin:8px auto 28px; padding:14px 16px; border:1px solid var(--border); border-radius:var(--radius); background:var(--panel); }
+  .v-chart-svg { display:block; width:100%; height:auto; }
+  .v-chart-empty { color:var(--text-faint); text-align:center; font-size:12px; padding:30px 0; }
   .big-btn { border:1px solid rgba(255,255,255,.15); border-radius:var(--radius); padding:14px 32px; font-size:15px; font-weight:400; cursor:pointer;
     color:var(--text); background:var(--panel); transition:.2s; letter-spacing:2px;
     display:inline-flex; align-items:center; justify-content:center; min-height:var(--touch-min); }
@@ -473,6 +476,7 @@
   <h1><iconify-icon icon="mdi:rocket"></iconify-icon>文明起航</h1>
   <div class="desc">整座小岛化作方舟，载着你的孩子驶向群星。<br>从一堆篝火到一艘星舰——这是属于你的一段文明史。</div>
   <div id="v-stats"></div>
+  <div id="v-chart" class="v-chart"></div>
   <button class="big-btn" id="btn-again"><iconify-icon icon="mdi:sprout"></iconify-icon>再育一代文明</button>
 </div>
 

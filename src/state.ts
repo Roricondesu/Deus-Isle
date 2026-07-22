@@ -53,6 +53,17 @@ export interface GameState {
   tasks: TaskState;
   /* 累计自动升级次数（驱动难度递增） */
   upgrades: number;
+  /* 历史采样（用于结算折线图） */
+  history: HistorySample[];
+}
+
+export interface HistorySample {
+  t: number;     // 游戏时间（秒）
+  pop: number;
+  food: number;
+  gold: number;
+  faith: number;
+  happy: number;
 }
 
 export interface TaskState {
@@ -96,6 +107,7 @@ export const S: GameState = {
   skillChoices: null,
   tasks: { list: [], lastRefresh: 0 },
   upgrades: 0,
+  history: [],
 };
 
 /* ================= 地形：种子 + 高度场 + 不规则岸线 + 填海地块 ================= */
@@ -247,6 +259,20 @@ export const eraMul = (): number => 1 + S.era * 0.25;
 
 /** 难度系数：每次自动升级 +6%，最高 +150% */
 export const difficulty = (): number => Math.min(2.5, 1 + S.upgrades * 0.06);
+
+/** 采样当前状态到历史记录（用于结算折线图） */
+export function sampleHistory(): void {
+  S.history.push({
+    t: S.playTime,
+    pop: S.pop,
+    food: Math.floor(S.food),
+    gold: Math.floor(S.gold),
+    faith: Math.floor(S.faith),
+    happy: Math.round(S.happy),
+  });
+  // 控制数组规模：超过 240 点时丢弃最旧的（约 40 分钟 @10s 采样）
+  if (S.history.length > 240) S.history.shift();
+}
 
 export const countType = (t: string): number => {
   let n = 0;

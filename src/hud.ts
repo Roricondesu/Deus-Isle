@@ -9,6 +9,7 @@ import {
   costText,
   expandCost,
   totalBuildings,
+  type HistorySample,
 } from './state';
 import {
   CATALOG,
@@ -289,7 +290,91 @@ export function showVictory(): void {
         '<div class="v-stat"><b>' + x[0] + '</b><span>' + x[1] + '</span></div>',
     )
     .join('');
+  const chart = $('v-chart');
+  if (chart) chart.innerHTML = renderHistoryChart(S.history);
   $('overlay-victory').classList.remove('hidden');
+}
+
+/* ================= 结算折线图（纯 SVG） ================= */
+interface ChartSeries {
+  key: keyof Omit<HistorySample, 't'>;
+  color: string;
+  label: string;
+}
+
+const CHART_SERIES: ChartSeries[] = [
+  { key: 'pop', color: '#9fd8ff', label: '人口' },
+  { key: 'food', color: '#ffd76a', label: '食物' },
+  { key: 'gold', color: '#ffe98a', label: '金币' },
+  { key: 'faith', color: '#c8a0ff', label: '信仰' },
+  { key: 'happy', color: '#7affc0', label: '幸福' },
+];
+
+function renderHistoryChart(history: HistorySample[]): string {
+  if (history.length < 2) {
+    return '<div class="v-chart-empty">数据不足以绘制曲线</div>';
+  }
+  const W = 520, H = 200, PAD_L = 36, PAD_R = 16, PAD_T = 16, PAD_B = 28;
+  const innerW = W - PAD_L - PAD_R;
+  const innerH = H - PAD_T - PAD_B;
+  const LEGEND_H = 26;
+  const VB_H = H + LEGEND_H;
+
+  const tMin = history[0].t;
+  const tMax = history[history.length - 1].t;
+  const tRange = Math.max(1, tMax - tMin);
+
+  // 每条曲线独立归一化（各自取最大值），避免数量级差异压平曲线
+  const seriesMax: Record<string, number> = {};
+  for (const s of CHART_SERIES) {
+    let m = 0;
+    for (const h of history) m = Math.max(m, h[s.key]);
+    seriesMax[s.key] = Math.max(1, m);
+  }
+
+  const xOf = (t: number) => PAD_L + ((t - tMin) / tRange) * innerW;
+  const yOf = (val: number, key: string) =>
+    PAD_T + innerH - (val / seriesMax[key]) * innerH;
+
+  // 网格线（4 条水平）
+  let grid = '';
+  for (let i = 0; i <= 4; i++) {
+    const y = PAD_T + (innerH * i) / 4;
+    grid += `<line x1="${PAD_L}" y1="${y.toFixed(1)}" x2="${W - PAD_R}" y2="${y.toFixed(1)}" stroke="rgba(255,255,255,.08)" stroke-width="1"/>`;
+  }
+
+  // 折线路径
+  const paths = CHART_SERIES.map((s) => {
+    const pts = history.map((h) => `${xOf(h.t).toFixed(1)},${yOf(h[s.key], s.key).toFixed(1)}`);
+    return `<polyline points="${pts.join(' ')}" fill="none" stroke="${s.color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" opacity="0.9"/>`;
+  }).join('');
+
+  // X 轴刻度（5 个时间标签）
+  const xLabels: string[] = [];
+  for (let i = 0; i <= 4; i++) {
+    const frac = i / 4;
+    const t = tMin + tRange * frac;
+    const min = Math.floor(t / 60);
+    const x = PAD_L + innerW * frac;
+    xLabels.push(
+      `<text x="${x.toFixed(1)}" y="${H - 8}" fill="rgba(255,255,255,.4)" font-size="10" text-anchor="middle">${min}m</text>`,
+    );
+  }
+
+  // 图例
+  const legend = CHART_SERIES.map((s, i) => {
+    const lx = 6 + (i % 3) * 90;
+    const ly = Math.floor(i / 3) * 16;
+    return `<g transform="translate(${lx},${ly})"><rect width="10" height="3" y="5" fill="${s.color}" rx="1.5"/><text x="16" y="9" fill="rgba(255,255,255,.6)" font-size="11">${s.label}</text></g>`;
+  }).join('');
+
+  return `<svg viewBox="0 0 ${W} ${VB_H}" class="v-chart-svg" preserveAspectRatio="xMidYMid meet">
+    <rect x="${PAD_L}" y="${PAD_T}" width="${innerW}" height="${innerH}" fill="rgba(255,255,255,.03)" rx="4"/>
+    ${grid}
+    ${xLabels.join('')}
+    ${paths}
+    <g transform="translate(${PAD_L}, ${H + 6})">${legend}</g>
+  </svg>`;
 }
 
 /* ================= 存档/读档面板 ================= */

@@ -41,7 +41,7 @@ import {
   deleteSlot,
   SAVE_SLOTS,
 } from './save';
-import { S, difficulty } from './state';
+import { S, difficulty, sampleHistory } from './state';
 import { setupAudioToggle, unlockAudio, sfx, muted as audioMuted, setMuted } from './audio';
 import { rebuildRoads } from './roads';
 import { loadLang, setLang, applyI18n, t, lang } from './i18n';
@@ -54,6 +54,7 @@ let saveAcc = 0;
 let evtAcc = 20;
 let prayAcc = 8;
 let hudAcc = 0;
+let histAcc = 0;
 let paused = false;
 
 export function isPaused(): boolean { return paused; }
@@ -114,6 +115,11 @@ function loop(): void {
     if (saveAcc > 15) {
       saveAcc = 0;
       saveGame();
+    }
+    histAcc += gdt;
+    if (histAcc > 10) {
+      histAcc = 0;
+      sampleHistory();
     }
     hudAcc += dt;
     if (hudAcc > 0.3) {

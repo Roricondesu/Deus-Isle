@@ -24,6 +24,7 @@ import {
   costMul,
   citizenSpeedMul,
   difficulty,
+  sampleHistory,
   type CellEntry,
   type Crisis,
 } from './state';
@@ -722,6 +723,7 @@ export function updateLaunch(dt: number): void {
   if (k >= 1) {
     S.over = true;
     document.body.classList.remove('cine');
+    sampleHistory(); // 结算前补一次最终采样
     showVictory();
     localStorage.removeItem('deus-isle-save');
   }
