@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { B, C, CO, SP, G, _m } from './materials';
 import { CIT_COL, ERAS } from './constants';
 import { rand, pick, lerp, clamp } from './utils';
-import { S, R, landH, outlineR, patchR, PATCHES } from './state';
+import { S, R, landH, outlineR, patchR, PATCHES, citizenSpeedMul } from './state';
 import { islandGroup } from './environment';
 import { roadEdges, roadVersion } from './roads';
 import { burst } from './particles';
@@ -510,7 +510,7 @@ export function updateCitizens(dt: number, t: number): void {
           if (c.pathIdx >= c.path.length) { c.state = 'idle'; c.t = rand(1.5, 4); }
         } else {
           const onWater = landH(g.position.x, g.position.z) < 0.05;
-          const v = c.sp * (onWater ? 0.7 : 1) * dt;
+          const v = c.sp * citizenSpeedMul() * (onWater ? 0.7 : 1) * dt;
           g.position.x += (dx / d) * v;
           g.position.z += (dz / d) * v;
           g.rotation.y = Math.atan2(dx, dz);
@@ -525,7 +525,7 @@ export function updateCitizens(dt: number, t: number): void {
         const d = Math.hypot(dx, dz);
         if (d < 0.25) { c.state = 'idle'; c.t = rand(1.5, 4); }
         else {
-          const v = c.sp * dt;
+          const v = c.sp * citizenSpeedMul() * dt;
           g.position.x += (dx / d) * v;
           g.position.z += (dz / d) * v;
           g.rotation.y = Math.atan2(dx, dz);

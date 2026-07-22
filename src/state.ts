@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { CELL, wonderCost, eraReq } from './constants';
+import { CELL, wonderCost, eraReq, SKILLMAP, EXPAND_COST } from './constants';
 import { rand, smooth } from './utils';
 import { icon, IC } from './icon';
 
@@ -44,6 +44,24 @@ export interface GameState {
   jobs: Map<string, string[]>; // building key -> citizen ids at work
   /* 危机统计/可应对神迹 */
   plagueShield: number; // 免疫时间（秒）
+  /* 时代技能：每时代可学习一个 */
+  skills: string[];
+  /* 当前可选技能（时代跃迁时弹出） */
+  skillChoices: string[] | null;
+  /* 任务清单 */
+  tasks: TaskState;
+}
+
+export interface TaskState {
+  list: ActiveTask[];
+  lastRefresh: number;
+}
+
+export interface ActiveTask {
+  id: string;
+  text: string;
+  icon: string;
+  done: boolean;
 }
 
 export const S: GameState = {
@@ -70,6 +88,9 @@ export const S: GameState = {
   crisis: null,
   jobs: new Map(),
   plagueShield: 0,
+  skills: [],
+  skillChoices: null,
+  tasks: { list: [], lastRefresh: 0 },
 };
 
 /* ================= 地形：种子 + 高度场 + 不规则岸线 + 填海地块 ================= */
@@ -184,12 +205,37 @@ export function findCellNear(cx0: number, cz0: number): { x: number; z: number }
   return null;
 }
 
+/* ================= 技能加成辅助 ================= */
+function sumEffect(type: string): number {
+  let s = 0;
+  for (const k of S.skills) {
+    const def = SKILLMAP[k];
+    if (!def) continue;
+    for (const e of def.effects) {
+      if (e.type === type) s += e.value;
+    }
+  }
+  return s;
+}
+
+export const farmMul = (): number => 1 + sumEffect('farmMul');
+export const woodMul = (): number => 1 + sumEffect('woodMul');
+export const marketMul = (): number => 1 + sumEffect('marketMul');
+export const templeMul = (): number => 1 + sumEffect('templeMul');
+export const popCapMul = (): number => 1 + sumEffect('popCapMul');
+export const citizenSpeedMul = (): number => 1 + sumEffect('citizenSpeedMul');
+export const costMul = (): number => Math.max(0.5, 1 - sumEffect('costMul'));
+export const godCdMul = (): number => Math.max(0.5, 1 - sumEffect('godCdMul'));
+export const crisisDurMul = (): number => Math.max(0.3, 1 - sumEffect('crisisDurMul'));
+export const crisisHappyMul = (): number => Math.max(0, 1 - sumEffect('crisisHappyMul'));
+export const rainDurAdd = (): number => sumEffect('rainDurAdd');
+
 export const popCap = (): number => {
   let c = 0;
   S.cells.forEach((b) => {
     if (b.t === 'house') c += 4;
   });
-  return c;
+  return Math.floor(c * popCapMul());
 };
 
 export const eraMul = (): number => 1 + S.era * 0.25;
@@ -208,7 +254,15 @@ export const totalBuildings = (): number => S.cells.size;
 import type { BuildingDef } from './constants';
 
 export function costOf(def: BuildingDef): [number, number, number] {
-  return def.t === 'wonder' ? wonderCost(S.era) : def.cost;
+  const base = def.t === 'wonder' ? wonderCost(S.era) : def.cost;
+  const m = costMul();
+  return [Math.ceil(base[0] * m), Math.ceil(base[1] * m), Math.ceil(base[2] * m)];
+}
+
+export function expandCost(idx: number): [number, number] {
+  const c = EXPAND_COST[idx];
+  const m = costMul();
+  return [Math.ceil(c[0] * m), Math.ceil(c[1] * m)];
 }
 
 export function canAfford(cost: number[]): boolean {

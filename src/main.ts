@@ -29,8 +29,9 @@ import {
   enterExpandMode,
   autoUpgradeTick,
 } from './game';
-import { refreshHUD, renderDock, updateGodDock, toast, updateEraBadge, showSavePanel, hideSavePanel } from './hud';
+import { refreshHUD, renderDock, updateGodDock, toast, updateEraBadge, showSavePanel, hideSavePanel, renderTaskPanel, renderSkillBar } from './hud';
 import { IC } from './icon';
+import { updateTasks, refreshTasks } from './tasks';
 import {
   saveGame,
   loadGame,
@@ -102,6 +103,8 @@ function loop(): void {
       hudAcc = 0;
       refreshHUD();
       updateGodDock();
+      renderTaskPanel();
+      renderSkillBar();
     }
     updateCitizens(gdt, t);
     updateCrisis(gdt);
@@ -110,6 +113,7 @@ function loop(): void {
     updateRain(dt);
     autoUpgradeTick(gdt);
     updateTrees(gdt);
+    updateTasks(gdt);
   }
   dayNight();
   paletteLerp(dt);
@@ -191,6 +195,9 @@ function bindButtons(): void {
         refreshHUD();
         renderDock();
         updateEraBadge();
+        refreshTasks(true);
+        renderTaskPanel();
+        renderSkillBar();
         toast(t('loaded'), IC.check);
       } else {
         sfx.error();
@@ -382,6 +389,9 @@ function init(): void {
   tweens.length = 0;
   renderDock();
   refreshHUD();
+  refreshTasks(true);
+  renderTaskPanel();
+  renderSkillBar();
   rebuildRoads();
   assignJobs();
   loop();

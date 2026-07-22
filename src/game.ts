@@ -9,9 +9,20 @@ import {
   canAfford,
   costText,
   pay,
+  expandCost,
   PATCHES,
   addPatch,
   landH,
+  farmMul,
+  woodMul,
+  marketMul,
+  templeMul,
+  crisisHappyMul,
+  crisisDurMul,
+  godCdMul,
+  rainDurAdd,
+  costMul,
+  citizenSpeedMul,
   type CellEntry,
   type Crisis,
 } from './state';
@@ -19,11 +30,14 @@ import {
   GODS,
   PRAYERS,
   ERAS,
-  EXPAND_COST,
   eraReq,
   CATALOG,
   CELL,
+  SKILLS,
+  SKILLMAP,
+  rollSkills,
   type BuildingDef,
+  type SkillDef,
 } from './constants';
 import { V3, rand, randi, pick, clamp, lerp, tw, easeIn, easeOutBack } from './utils';
 import {
@@ -49,11 +63,14 @@ import {
   hideEraTransition,
   showVictory,
   updateCrisisBanner,
+  showSkillChoices,
+  hideSkillChoices,
 } from './hud';
 import { placeBuilding, highlight } from './interaction';
 import { iconify, icon, IC } from './icon';
 import { saveGame } from './save';
 import { rebuildRoads } from './roads';
+import { markCrisisSurvived } from './tasks';
 
 /* ================= 随机事件（直接修改 S） ================= */
 interface EventDef {
@@ -118,7 +135,7 @@ export const EVENTS: EventDef[] = [
     w: 2,
     f() {
       if (inCrisis() || S.plagueShield > 0) return null;
-      S.crisis = { type: 'plague', t: 45, severity: 0.5 + Math.random() * 0.4 };
+      S.crisis = { type: 'plague', t: 45 * crisisDurMul(), severity: 0.5 + Math.random() * 0.4 };
       return ['瘟疫爆发！市民不断病倒，快用神迹治愈', IC.plague];
     },
   },
@@ -126,7 +143,7 @@ export const EVENTS: EventDef[] = [
     w: 2,
     f() {
       if (inCrisis()) return null;
-      S.crisis = { type: 'drought', t: 50, severity: 0.5 + Math.random() * 0.4 };
+      S.crisis = { type: 'drought', t: 50 * crisisDurMul(), severity: 0.5 + Math.random() * 0.4 };
       return ['大旱来袭！农田干涸，河流断流', IC.drought];
     },
   },
@@ -134,7 +151,7 @@ export const EVENTS: EventDef[] = [
     w: 1,
     f() {
       if (inCrisis()) return null;
-      S.crisis = { type: 'tsunami', t: 30, severity: 0.6 + Math.random() * 0.3 };
+      S.crisis = { type: 'tsunami', t: 30 * crisisDurMul(), severity: 0.6 + Math.random() * 0.3 };
       addShake(1.2);
       return ['海啸警报！沿海建筑停产，快平息海浪', IC.tsunami];
     },
@@ -143,7 +160,7 @@ export const EVENTS: EventDef[] = [
     w: 1,
     f() {
       if (inCrisis()) return null;
-      S.crisis = { type: 'meteor', t: 25, severity: 0.5 + Math.random() * 0.5 };
+      S.crisis = { type: 'meteor', t: 25 * crisisDurMul(), severity: 0.5 + Math.random() * 0.5 };
       addShake(0.8);
       castMeteor(true);
       return ['陨石坠落！小心火灾蔓延', IC.meteor];
@@ -159,6 +176,7 @@ export function econTick(): void {
   const tsunami = S.crisis?.type === 'tsunami' ? 1 - S.crisis.severity * 0.6 : 1;
   const meteor = S.crisis?.type === 'meteor' ? 1 - S.crisis.severity * 0.5 : 1;
   let dFood = 0, dWood = 0, dGold = 0, dFaith = 0, happyT = 52;
+  const fMul = farmMul(), wMul = woodMul(), mMul = marketMul(), tMul = templeMul();
 
   S.cells.forEach((b, key) => {
     const m = b.relic ? 0.5 : 1 + b.era * 0.25;
@@ -166,17 +184,17 @@ export function econTick(): void {
     const crisisM = b.t === 'farm' ? drought : b.t === 'market' || b.t === 'temple' ? tsunami : meteor;
     switch (b.t) {
       case 'farm':
-        dFood += 0.6 * m * rainB * drought * (1 + w * 0.7);
+        dFood += 0.6 * m * rainB * drought * (1 + w * 0.7) * fMul;
         break;
       case 'wood':
-        dWood += 0.35 * m * (1 + w * 0.7);
+        dWood += 0.35 * m * (1 + w * 0.7) * wMul;
         break;
       case 'market':
-        dGold += 0.4 * m * tsunami * (1 + w * 0.6);
+        dGold += 0.4 * m * tsunami * (1 + w * 0.6) * mMul;
         happyT += 2;
         break;
       case 'temple':
-        dFaith += 0.18 * m * tsunami * (1 + w * 0.6);
+        dFaith += 0.18 * m * tsunami * (1 + w * 0.6) * tMul;
         happyT += 3;
         break;
       case 'park':
@@ -200,7 +218,7 @@ export function econTick(): void {
   S.faith += dFaith;
 
   // 危机对幸福的影响
-  if (S.crisis) happyT -= S.crisis.severity * 25;
+  if (S.crisis) happyT -= S.crisis.severity * 25 * crisisHappyMul();
   // 生病市民
   const sick = citizens.filter((c) => c.state === 'sick').length;
   if (sick) happyT -= Math.min(30, sick * 2);
@@ -279,7 +297,7 @@ function applyPrayerEffect(p: (typeof PRAYERS)[number]): string {
       S.gold += 18;
       return '+18 金币';
     case '希望风调雨顺':
-      S.buffs.rain = Math.max(S.buffs.rain, 25);
+      S.buffs.rain = Math.max(S.buffs.rain, 25 + rainDurAdd());
       rainPts.visible = true;
       return '降下甘霖';
     default:
@@ -348,7 +366,7 @@ export function fireEvent(): void {
 /* ================= 神迹 ================= */
 function bindGods(): void {
   GODS[0].f = () => {
-    S.buffs.rain = 60;
+    S.buffs.rain = 60 + rainDurAdd();
     rainPts.visible = true;
     toast('神迹·赐雨！农田产量翻倍', IC.rain);
     return true;
@@ -376,6 +394,7 @@ function bindGods(): void {
     }
     S.crisis = null;
     hideTsunamiWave();
+    markCrisisSurvived();
     toast('神迹·平息！海啸与干旱已退去', IC.calm);
     updateCrisisBanner();
     return true;
@@ -385,6 +404,7 @@ function bindGods(): void {
     S.plagueShield = 90;
     if (S.crisis?.type === 'plague') {
       S.crisis = null;
+      markCrisisSurvived();
     }
     toast('神迹·治愈！瘟疫退散，市民获得免疫', IC.heal);
     updateCrisisBanner();
@@ -406,7 +426,7 @@ export function castGod(k: string): void {
     return;
   }
   S.faith -= g.cost;
-  S.cds[k] = g.cd;
+  S.cds[k] = g.cd * godCdMul();
   if (g.f() === false) {
     // 神迹未生效，退还消耗与冷却
     S.faith += g.cost;
@@ -460,6 +480,7 @@ export function updateCrisis(dt: number): void {
   if (S.crisis.t <= 0) {
     const names: Record<Crisis['type'], string> = { drought: '大旱', tsunami: '海啸', plague: '瘟疫', meteor: '陨石' };
     toast(names[type] + ' 已经平息', IC.check);
+    markCrisisSurvived();
     S.crisis = null;
     hideTsunamiWave();
     updateCrisisBanner();
@@ -529,17 +550,33 @@ export function eraUp(): void {
     burst(V3(0, 4, 0), 0xffffff, 100, 14, 2, -1, 8);
   }, 2300);
   setTimeout(() => {
-    S.timeScale = oldScale;
+    S.timeScale = 0;
+    hideEraTransition();
   }, 3800);
   setTimeout(() => {
-    hideEraTransition();
-    document.body.classList.remove('cine');
-    S.transitioning = false;
-    toast('文明进入' + ERAS[S.era].name + '！建筑已全面进化', ERAS[S.era].icon);
-    refreshHUD();
-    renderDock();
-    saveGame();
-  }, 5800);
+    const choices = rollSkills(Math.min(3, SKILLS.length), S.skills);
+    if (choices.length === 0) {
+      endEraUp(oldScale);
+      return;
+    }
+    S.skillChoices = choices.map((s) => s.k);
+    showSkillChoices(choices, (k) => {
+      S.skills.push(k);
+      S.skillChoices = null;
+      hideSkillChoices();
+      endEraUp(oldScale);
+    });
+  }, 4100);
+}
+
+function endEraUp(oldScale: number): void {
+  document.body.classList.remove('cine');
+  S.timeScale = oldScale;
+  S.transitioning = false;
+  toast('文明进入' + ERAS[S.era].name + '！建筑已全面进化', ERAS[S.era].icon);
+  refreshHUD();
+  renderDock();
+  saveGame();
 }
 
 function upgradeBuildingMesh(b: CellEntry, key: string, newEra: number): void {
@@ -599,10 +636,11 @@ export function autoUpgradeTick(dt: number): void {
   });
   if (!candidates.length) return;
   const { key, b, def } = pick(candidates);
+  const cm = costMul();
   const cost: [number, number, number] = [
-    Math.ceil(def.cost[0] * UPGRADE_RATIO),
-    Math.ceil(def.cost[1] * UPGRADE_RATIO),
-    Math.ceil(def.cost[2] * UPGRADE_RATIO),
+    Math.ceil(def.cost[0] * UPGRADE_RATIO * cm),
+    Math.ceil(def.cost[1] * UPGRADE_RATIO * cm),
+    Math.ceil(def.cost[2] * UPGRADE_RATIO * cm),
   ];
   // 资源不够就等下一轮
   if (!canAfford(cost)) return;
@@ -665,7 +703,7 @@ export function enterExpandMode(): void {
     cancelExpandMode();
     return;
   }
-  const c = EXPAND_COST[S.expand];
+  const c = expandCost(S.expand);
   if (!canAfford([c[0], c[1], 0])) {
     sfx.error();
     toast('资源不足！需要 ' + costText([c[0], c[1], 0]), IC.warning);
@@ -709,7 +747,7 @@ export function confirmExpandAt(x: number, z: number): void {
     toast('位置不合适：需在水面上，距岛心 ' + PATCH_MIN_DIST + '–' + PATCH_MAX_DIST + ' 之间', IC.warning);
     return;
   }
-  const c = EXPAND_COST[S.expand];
+  const c = expandCost(S.expand);
   if (!canAfford([c[0], c[1], 0])) {
     sfx.error();
     toast('资源不足！需要 ' + costText([c[0], c[1], 0]), IC.warning);

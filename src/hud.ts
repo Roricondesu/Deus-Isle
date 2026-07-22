@@ -7,6 +7,7 @@ import {
   canAfford,
   costOf,
   costText,
+  expandCost,
   totalBuildings,
 } from './state';
 import {
@@ -14,16 +15,18 @@ import {
   CATMAP,
   ERAS,
   ERA_TITLE_SUB,
-  EXPAND_COST,
   GODS,
   eraReq,
+  SKILLMAP,
   type BuildingDef,
+  type SkillDef,
 } from './constants';
 import { sfx } from './audio';
 import { camera } from './environment';
 import { castGod } from './game';
 import { startLaunch } from './game';
 import { iconify, icon, IC } from './icon';
+import { renderTasksHTML, refreshTasks } from './tasks';
 import {
   listManualSaves,
   saveToSlot,
@@ -130,10 +133,10 @@ export function refreshHUD(): void {
     eb.disabled = true;
     eb.classList.remove('sel');
   } else {
-    const c = EXPAND_COST[S.expand];
+    const c = expandCost(S.expand);
     eb.innerHTML =
       icon(IC.island) + ' 填海扩岛<small style="display:block;font-size:9px;opacity:.75">' +
-      iconify(costText([c[0], c[1], 0])) +
+      costText([c[0], c[1], 0]) +
       '</small>';
     eb.disabled = !canAfford([c[0], c[1], 0]);
     eb.classList.remove('sel');
@@ -224,6 +227,57 @@ export function updateEraBadge(): void {
   $('era-icon').innerHTML = icon(ERAS[S.era].icon);
   $('era-name').textContent = ERAS[S.era].name;
   $('era-sub').textContent = '第 ' + (S.era + 1) + ' 纪元';
+}
+
+/* ================= 时代技能选择覆盖层 ================= */
+export function showSkillChoices(choices: SkillDef[], onPick: (k: string) => void): void {
+  const ov = $('overlay-skill');
+  const grid = $('skill-grid');
+  grid.innerHTML = '';
+  choices.forEach((s) => {
+    const card = document.createElement('div');
+    card.className = 'skill-card';
+    card.innerHTML =
+      '<div class="skill-icon">' + icon(s.icon) + '</div>' +
+      '<div class="skill-name">' + iconify(s.name) + '</div>' +
+      '<div class="skill-desc">' + iconify(s.desc) + '</div>';
+    card.onclick = () => {
+      sfx.click();
+      onPick(s.k);
+    };
+    grid.appendChild(card);
+  });
+  ov.classList.remove('hidden');
+}
+
+export function hideSkillChoices(): void {
+  $('overlay-skill').classList.add('hidden');
+}
+
+/* ================= 任务清单面板 ================= */
+export function renderTaskPanel(): void {
+  refreshTasks();
+  const el = $('task-panel');
+  if (!el) return;
+  el.innerHTML =
+    '<div class="task-head">' + icon(IC.target) + ' 任务清单</div>' +
+    '<div class="task-list">' + renderTasksHTML() + '</div>';
+}
+
+export function renderSkillBar(): void {
+  const el = $('skill-bar');
+  if (!el) return;
+  if (!S.skills.length) {
+    el.innerHTML = '';
+    return;
+  }
+  el.innerHTML = S.skills
+    .map((k) => {
+      const s = SKILLMAP[k];
+      if (!s) return '';
+      return '<span class="skill-chip">' + icon(s.icon) + iconify(s.name) + '</span>';
+    })
+    .join('');
 }
 
 export function showVictory(): void {

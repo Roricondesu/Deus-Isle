@@ -112,3 +112,43 @@ export const GODS: GodDef[] = [
   { k: 'calm', icon: IC.calm, name: '平息海啸', cost: 30, cd: 50, tip: '驱散海啸与干旱危机', f() { return true; } },
   { k: 'heal', icon: IC.heal, name: '治愈瘟疫', cost: 35, cd: 55, tip: '治愈所有病人并免疫瘟疫', f() { return true; } },
 ];
+
+/* 时代技能：每时代可选择一项，肉鸽式叠加 */
+export interface SkillEffect {
+  type: string;
+  value: number;
+}
+
+export interface SkillDef {
+  k: string;
+  icon: string;
+  name: string;
+  desc: string;
+  effects: SkillEffect[];
+}
+
+export const SKILLS: SkillDef[] = [
+  { k: 'farmTech', icon: IC.farm, name: '农业革命', desc: '农田产出 +30%', effects: [{ type: 'farmMul', value: 0.30 }] },
+  { k: 'woodTech', icon: IC.woodcutter, name: '林业技术', desc: '伐木产出 +30%', effects: [{ type: 'woodMul', value: 0.30 }] },
+  { k: 'marketTech', icon: IC.market, name: '商业繁荣', desc: '市场产出 +30%', effects: [{ type: 'marketMul', value: 0.30 }] },
+  { k: 'templeTech', icon: IC.temple, name: '信仰凝聚', desc: '神庙产出 +30%，神迹冷却 -10%', effects: [{ type: 'templeMul', value: 0.30 }, { type: 'godCdMul', value: 0.10 }] },
+  { k: 'popTech', icon: IC.pop, name: '人口红利', desc: '人口容量 +25%', effects: [{ type: 'popCapMul', value: 0.25 }] },
+  { k: 'buildTech', icon: IC.house, name: '建筑大师', desc: '建筑成本 -15%', effects: [{ type: 'costMul', value: 0.15 }] },
+  { k: 'crisisTech', icon: IC.warning, name: '防灾工事', desc: '危机持续时间 -25%', effects: [{ type: 'crisisDurMul', value: 0.25 }] },
+  { k: 'speedTech', icon: IC.haste, name: '迅捷工人', desc: '市民移动速度 +25%', effects: [{ type: 'citizenSpeedMul', value: 0.25 }] },
+  { k: 'happyTech', icon: IC.happy, name: '众志成诚', desc: '危机期间幸福下降 -30%', effects: [{ type: 'crisisHappyMul', value: 0.30 }] },
+  { k: 'rainTech', icon: IC.rain, name: '天降甘霖', desc: '赐雨持续时间 +30秒', effects: [{ type: 'rainDurAdd', value: 30 }] },
+];
+
+export const SKILLMAP: Record<string, SkillDef> = SKILLS.reduce((m, s) => { m[s.k] = s; return m; }, {} as Record<string, SkillDef>);
+
+/** 随机抽取 n 个不重复的技能 */
+export function rollSkills(n: number, exclude: string[] = []): SkillDef[] {
+  const pool = SKILLS.filter((s) => !exclude.includes(s.k));
+  const out: SkillDef[] = [];
+  while (out.length < n && pool.length) {
+    const i = Math.floor(Math.random() * pool.length);
+    out.push(pool.splice(i, 1)[0]);
+  }
+  return out;
+}

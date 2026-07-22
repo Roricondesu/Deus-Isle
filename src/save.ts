@@ -1,4 +1,4 @@
-import { S, SEED, PATCHES, setSeed, setPatches, type Patch, type Crisis } from './state';
+import { S, SEED, PATCHES, setSeed, setPatches, type Patch, type Crisis, type TaskState } from './state';
 import { setPaletteSync } from './environment';
 import { buildIsland } from './environment';
 import { placeBuilding } from './interaction';
@@ -30,6 +30,8 @@ interface SaveData {
   crisis: Crisis | null;
   plagueShield: number;
   citizens: SerializedCitizen[];
+  skills: string[];
+  tasks: TaskState;
   // 手动存档额外字段
   savedAt?: number;     // 保存时间戳
   note?: string;        // 备注（自动生成）
@@ -74,6 +76,8 @@ function collectSave(): SaveData {
     crisis: S.crisis,
     plagueShield: S.plagueShield,
     citizens: citizenData,
+    skills: S.skills,
+    tasks: { list: S.tasks.list.map((t) => ({ ...t })), lastRefresh: S.tasks.lastRefresh },
     savedAt: Date.now(),
   };
 }
@@ -95,6 +99,11 @@ function applySave(d: SaveData): void {
   S.wonders = d.wonders || {};
   S.crisis = d.crisis ?? null;
   S.plagueShield = d.plagueShield ?? 0;
+  S.skills = Array.isArray(d.skills) ? d.skills : [];
+  S.skillChoices = null;
+  S.tasks = d.tasks && Array.isArray(d.tasks.list)
+    ? { list: d.tasks.list.map((t) => ({ ...t })), lastRefresh: d.tasks.lastRefresh || 0 }
+    : { list: [], lastRefresh: 0 };
   // 还原地形种子和填海地块
   if (typeof d.seed === 'number') setSeed(d.seed);
   if (Array.isArray(d.patches)) setPatches(d.patches.map((p) => ({ ...p })));
