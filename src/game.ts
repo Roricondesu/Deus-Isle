@@ -313,7 +313,7 @@ export function spawnPrayer(): void {
   const p = pick(PRAYERS);
   const el = document.createElement('div');
   el.className = 'prayer';
-  el.textContent = p.txt;
+  el.innerHTML = icon(p.icon) + p.txt;
   document.getElementById('prayers')!.appendChild(el);
   activePrayer = { c, el, p, life: 9 };
   el.onclick = () => {

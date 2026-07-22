@@ -84,11 +84,11 @@ export const CIT_COL = [0x9a6a42, 0xe8e0d0, 0x4a5a8a, 0x5a5a62, 0x3a6ab8, 0xe8f0
 
 /* 祈祷任务 */
 export const PRAYERS = [
-  { txt: '祈求食物', fn(): string { return '+20 食物'; } },
-  { txt: '想要更多住房', fn(): string { return '+15 木材'; } },
-  { txt: '祈求平安', fn(): string { return '幸福+6'; } },
-  { txt: '盼望财富', fn(): string { return '+18 金币'; } },
-  { txt: '希望风调雨顺', fn(): string { return '降下甘霖'; } },
+  { txt: '祈求食物', icon: IC.food, fn(): string { return '+20 食物'; } },
+  { txt: '想要更多住房', icon: IC.house, fn(): string { return '+15 木材'; } },
+  { txt: '祈求平安', icon: IC.calm, fn(): string { return '幸福+6'; } },
+  { txt: '盼望财富', icon: IC.gold, fn(): string { return '+18 金币'; } },
+  { txt: '希望风调雨顺', icon: IC.rain, fn(): string { return '降下甘霖'; } },
 ];
 
 /* 随机事件定义在 game.ts 中，因为需要修改 S 状态 */
