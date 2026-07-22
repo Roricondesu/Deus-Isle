@@ -285,7 +285,8 @@
   #skill-bar { position:absolute; top:90px; left:50%; transform:translateX(-50%); display:flex; gap:6px; flex-wrap:wrap; justify-content:center; max-width:min(520px,92vw); pointer-events:none; z-index:12; }
   .skill-chip { display:inline-flex; align-items:center; gap:4px; padding:3px 8px; border-radius:999px; background:rgba(12,16,32,.5); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); color:#ffe9b0; font-size:10px; font-weight:600; pointer-events:auto; }
   .skill-chip iconify-icon { width:12px; height:12px; }
-  #task-panel { position:absolute; top:116px; left:50%; transform:translateX(-50%); width:min(420px,92vw); max-height:min(240px,38vh); overflow-y:auto; padding:12px 14px; pointer-events:auto; z-index:12; }
+  #task-panel { position:absolute; top:116px; left:50%; transform:translateX(-50%); width:min(420px,92vw); max-height:min(240px,38vh); overflow-y:auto; padding:12px 14px; z-index:12; }
+  #ui.ui-hidden #task-panel { pointer-events:none; }
   #task-panel .task-head { display:flex; align-items:center; gap:6px; color:#ffe9b0; font-size:13px; font-weight:700; letter-spacing:2px; margin-bottom:8px; }
   #task-panel .task-head iconify-icon { width:16px; height:16px; }
   #task-panel .task-list { display:flex; flex-direction:column; gap:6px; }
@@ -300,7 +301,8 @@
   .task-empty { color:rgba(255,255,255,.45); text-align:center; font-size:12px; padding:8px; }
 
   /* ---------- 技能选择覆盖层 ---------- */
-  #overlay-skill { pointer-events:auto; z-index:60; background:radial-gradient(ellipse at center,rgba(12,16,36,.85),rgba(5,8,18,.95)); }
+  #overlay-skill { z-index:60; background:radial-gradient(ellipse at center,rgba(12,16,36,.85),rgba(5,8,18,.95)); }
+  #overlay-skill.hidden { pointer-events:none; }
   #overlay-skill .skill-title { color:#ffe9b0; font-size:clamp(20px,4vw,30px); font-weight:700; letter-spacing:4px; margin-bottom:24px; text-align:center; }
   #overlay-skill .skill-title iconify-icon { width:1em; height:1em; vertical-align:-0.12em; margin-right:8px; }
   #skill-grid { display:flex; gap:14px; justify-content:center; flex-wrap:wrap; max-width:min(900px,94vw); }
@@ -315,6 +317,22 @@
   .lb { position:fixed; left:0; right:0; height:0; background:#000; z-index:40; transition:height .9s cubic-bezier(.6,0,.3,1); }
   .lb.top { top:0; } .lb.bot { bottom:0; }
   body.cine .lb { height:9vh; }
+
+  /* ---------- 加载动画 ---------- */
+  #loading { position:fixed; inset:0; z-index:100; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    background:radial-gradient(ellipse at center,#0e1428,#050810); transition:opacity .8s ease; }
+  #loading.hidden { opacity:0; pointer-events:none; }
+  .loader-orb { position:relative; width:80px; height:80px; margin-bottom:28px; }
+  .loader-orb::before, .loader-orb::after { content:""; position:absolute; inset:0; border-radius:50%; border:3px solid transparent; }
+  .loader-orb::before { border-top-color:#ffd76a; border-right-color:#ffd76a; animation:spin 1s linear infinite; }
+  .loader-orb::after { inset:12px; border-bottom-color:#8ad0ff; border-left-color:#8ad0ff; animation:spin 1.5s linear infinite reverse; }
+  .loader-orb .core { position:absolute; inset:28px; border-radius:50%; background:radial-gradient(circle,#ffe9b0,#ffd76a); box-shadow:0 0 24px rgba(255,215,106,.7); animation:pulse 1.2s ease-in-out infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  @keyframes pulse { 0%,100%{ transform:scale(.85); opacity:.7; } 50%{ transform:scale(1.1); opacity:1; } }
+  .loader-text { color:rgba(255,255,255,.55); font-size:14px; letter-spacing:6px; font-weight:500; }
+  .loader-bar { width:180px; height:3px; margin-top:16px; border-radius:999px; background:rgba(255,255,255,.1); overflow:hidden; }
+  .loader-bar i { display:block; height:100%; width:40%; border-radius:999px; background:linear-gradient(90deg,#ffd76a,#8ad0ff); animation:loadSlide 1.4s ease-in-out infinite; }
+  @keyframes loadSlide { 0%{ transform:translateX(-100%); } 100%{ transform:translateX(350%); } }
 
   /* ---------- 移动端适配 ---------- */
   @media (min-width:641px) {
@@ -380,6 +398,12 @@
 <script src="https://code.iconify.design/iconify-icon/2.3.0/iconify-icon.min.js"></script>
 </head>
 <body>
+<div id="loading">
+  <div class="loader-orb"><div class="core"></div></div>
+  <div class="loader-text">正在唤醒文明…</div>
+  <div class="loader-bar"><i></i></div>
+</div>
+
 <div id="stage"></div>
 
 <div id="ui">
@@ -440,7 +464,7 @@
 
 <div class="lb top"></div><div class="lb bot"></div>
 
-<div class="overlay" id="overlay-intro">
+<div class="overlay hidden" id="overlay-intro">
   <div class="intro-panel">
     <h1 class="intro-en">DEUS ISLE</h1>
     <div class="intro-zh">神明小岛</div>

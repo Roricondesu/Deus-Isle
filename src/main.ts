@@ -397,4 +397,31 @@ function init(): void {
   loop();
 }
 
+/** 等待关键资源（字体、iconify 组件）就绪后，隐藏加载动画并显示主界面 */
+function finishLoading(): void {
+  const hideLoader = () => {
+    const loader = $('loading');
+    loader.classList.add('hidden');
+    $('overlay-intro').classList.remove('hidden');
+    setTimeout(() => loader.remove(), 900);
+  };
+
+  const promises: Promise<unknown>[] = [];
+  // 等待字体加载
+  if (document.fonts && document.fonts.ready) {
+    promises.push(document.fonts.ready);
+  }
+  // 等待 iconify-icon Web Component 注册
+  if (customElements && customElements.whenDefined) {
+    promises.push(customElements.whenDefined('iconify-icon'));
+  }
+  // 最少显示 600ms 加载动画，避免闪烁
+  promises.push(new Promise((r) => setTimeout(r, 600)));
+
+  Promise.all(promises)
+    .then(hideLoader)
+    .catch(hideLoader);
+}
+
+finishLoading();
 init();
