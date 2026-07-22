@@ -100,44 +100,35 @@ export function refreshHUD(): void {
   if (S.era < 6) {
     const r = eraReq(S.era);
     btn.innerHTML =
-      icon(IC.arrowUp) + ' 时代跃迁<small>' +
-      icon(IC.pop) + S.pop +
-      '/' +
-      r.pop +
-      ' · ' + icon(IC.gold) + Math.floor(S.gold) +
-      '/' +
-      r.gold +
-      ' · ' + icon(IC.wonder) +
-      (S.wonders[S.era] ? icon(IC.check) : '未建') +
+      icon(IC.arrowUp) + '时代跃迁<small>' +
+      S.pop + '/' + r.pop + ' · ' + Math.floor(S.gold) + '/' + r.gold +
+      ' · ' + (S.wonders[S.era] ? '已建奇观' : '未建奇观') +
       '</small>';
     const ok = eraReady();
     btn.disabled = !ok;
     btn.classList.toggle('ready', ok);
   } else if (S.wonders[6]) {
-    btn.innerHTML = icon(IC.eraRocket) + ' 发射方舟<small>终极一跃 · 文明起航</small>';
+    btn.innerHTML = icon(IC.eraRocket) + '发射方舟<small>终极一跃 · 文明起航</small>';
     btn.disabled = false;
     btn.classList.add('btn-launch');
     btn.onclick = startLaunch;
   } else {
-    btn.innerHTML = icon(IC.arrowUp) + ' 最终纪元<small>建造「方舟发射台」以通关</small>';
+    btn.innerHTML = icon(IC.arrowUp) + '最终纪元<small>建造方舟发射台以通关</small>';
     btn.disabled = true;
   }
 
   const eb = $('btn-expand') as HTMLButtonElement;
   if (S.expandMode) {
-    eb.innerHTML = icon(IC.target) + ' 取消选择<small style="display:block;font-size:9px;opacity:.75">点击海面任意位置 / Esc</small>';
+    eb.innerHTML = icon(IC.target) + '取消选择<small>点击海面 / Esc</small>';
     eb.disabled = false;
     eb.classList.add('sel');
   } else if (S.expand >= 10) {
-    eb.innerHTML = icon(IC.island) + ' 岛屿已达最大';
+    eb.innerHTML = icon(IC.island) + '岛屿已达最大';
     eb.disabled = true;
     eb.classList.remove('sel');
   } else {
     const c = expandCost(S.expand);
-    eb.innerHTML =
-      icon(IC.island) + ' 填海扩岛<small style="display:block;font-size:9px;opacity:.75">' +
-      costText([c[0], c[1], 0]) +
-      '</small>';
+    eb.innerHTML = icon(IC.island) + '填海扩岛<small>' + costText([c[0], c[1], 0]) + '</small>';
     eb.disabled = !canAfford([c[0], c[1], 0]);
     eb.classList.remove('sel');
   }
@@ -208,7 +199,7 @@ export function updateGodDock(): void {
 /* ================= 时代介绍 / 胜利覆盖层控制 ================= */
 export function showEraTransition(): void {
   $('era-anim-title').textContent = ERAS[S.era].name;
-  $('era-anim-sub').textContent = '第 ' + (S.era + 1) + ' 纪元 · ' + ERA_TITLE_SUB[S.era];
+  $('era-anim-sub').textContent = 'ERA ' + String(S.era + 1).padStart(2, '0') + ' · ' + ERA_TITLE_SUB[S.era];
   $('overlay-era').classList.remove('hidden');
   const anim = $('era-anim');
   anim.classList.remove('show');
@@ -216,7 +207,7 @@ export function showEraTransition(): void {
   anim.classList.add('show');
   $('era-icon').innerHTML = icon(ERAS[S.era].icon);
   $('era-name').textContent = ERAS[S.era].name;
-  $('era-sub').textContent = '第 ' + (S.era + 1) + ' 纪元';
+  $('era-sub').textContent = 'ERA ' + String(S.era + 1).padStart(2, '0');
 }
 
 export function hideEraTransition(): void {
@@ -226,7 +217,7 @@ export function hideEraTransition(): void {
 export function updateEraBadge(): void {
   $('era-icon').innerHTML = icon(ERAS[S.era].icon);
   $('era-name').textContent = ERAS[S.era].name;
-  $('era-sub').textContent = '第 ' + (S.era + 1) + ' 纪元';
+  $('era-sub').textContent = 'ERA ' + String(S.era + 1).padStart(2, '0');
 }
 
 /* ================= 时代技能选择覆盖层 ================= */
@@ -261,12 +252,10 @@ export function renderTaskPanel(): void {
   if (!el) return;
   const collapsed = el.classList.contains('collapsed');
   el.innerHTML =
-    '<div class="task-head">' + icon(IC.target) + ' 任务' +
+    '<div class="task-head">' + icon(IC.target) + 'Quests' +
     '<span class="task-toggle">' + icon(IC.chevronDown) + '</span></div>' +
     '<div class="task-list">' + renderTasksHTML() + '</div>';
-  // 保持折叠状态
   if (collapsed) el.classList.add('collapsed');
-  // 点击标题切换折叠
   const head = el.querySelector('.task-head');
   if (head) head.addEventListener('click', () => el.classList.toggle('collapsed'));
 }

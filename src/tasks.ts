@@ -189,7 +189,7 @@ export function taskRewardText(id: string): string {
 export function renderTasksHTML(): string {
   const list = S.tasks.list;
   if (!list.length) {
-    return `<div class="task-empty">暂无任务</div>`;
+    return `<div class="task-empty">No active quests</div>`;
   }
   return list
     .map(
