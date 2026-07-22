@@ -10,6 +10,13 @@ export interface CellEntry {
   g: THREE.Group;
 }
 
+/* 危机状态（单一、带剩余时间） */
+export interface Crisis {
+  type: 'drought' | 'plague' | 'tsunami' | 'meteor';
+  t: number;        // 剩余秒数
+  severity: number; // 0-1 强度
+}
+
 export interface GameState {
   started: boolean;
   over: boolean;
@@ -31,6 +38,11 @@ export interface GameState {
   cds: Record<string, number>;
   transitioning: boolean;
   expandMode: boolean;
+  crisis: Crisis | null;
+  /* 市民个体系统：职业槽位由建筑占用 */
+  jobs: Map<string, string[]>; // building key -> citizen ids at work
+  /* 危机统计/可应对神迹 */
+  plagueShield: number; // 免疫时间（秒）
 }
 
 export const S: GameState = {
@@ -51,9 +63,12 @@ export const S: GameState = {
   wonders: {},
   sel: null,
   buffs: { rain: 0, haste: 0 },
-  cds: { rain: 0, meteor: 0, bless: 0, haste: 0 },
+  cds: { rain: 0, meteor: 0, bless: 0, haste: 0, calm: 0, heal: 0 },
   transitioning: false,
   expandMode: false,
+  crisis: null,
+  jobs: new Map(),
+  plagueShield: 0,
 };
 
 /* ================= 地形：种子 + 高度场 + 不规则岸线 + 填海地块 ================= */

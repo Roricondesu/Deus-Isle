@@ -15,7 +15,7 @@ import {
   updateTrees,
 } from './environment';
 import { updateParts, smokeUpdate, updateRain } from './particles';
-import { updateCitizens } from './citizens';
+import { updateCitizens, assignJobs } from './citizens';
 import { setupInteraction, updateHover, placeBuilding } from './interaction';
 import {
   econTick,
@@ -24,6 +24,7 @@ import {
   updatePrayer,
   fireEvent,
   updateLaunch,
+  updateCrisis,
   eraUp,
   enterExpandMode,
   autoUpgradeTick,
@@ -102,6 +103,7 @@ function loop(): void {
       updateGodDock();
     }
     updateCitizens(gdt, t);
+    updateCrisis(gdt);
     updatePrayer(dt);
     updateLaunch(dt);
     updateRain(dt);
@@ -380,6 +382,7 @@ function init(): void {
   renderDock();
   refreshHUD();
   rebuildRoads();
+  assignJobs();
   loop();
 }
 

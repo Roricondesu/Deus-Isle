@@ -21,6 +21,7 @@ import { sfx } from './audio';
 import { toast, refreshHUD, renderDock, floatText } from './hud';
 import { confirmExpandAt, cancelExpandMode, isValidExpandPos } from './game';
 import { scheduleRebuildRoads } from './roads';
+import { assignJobs } from './citizens';
 
 /* ================= 建造高亮 & 幽灵预览 ================= */
 export const highlight = new THREE.Mesh(
@@ -242,6 +243,7 @@ export function placeBuilding(
   z: number,
   relic: boolean = false,
   slow: boolean = false,
+  assign: boolean = true,
 ): THREE.Group {
   const g = makeBuilding(t, e);
   g.position.set(x * CELL, cellY(x, z) - 0.06, z * CELL);
@@ -260,5 +262,6 @@ export function placeBuilding(
   const entry: CellEntry = { t, era: e, relic, g };
   S.cells.set(cellKey(x, z), entry);
   scheduleRebuildRoads();
+  if (assign) assignJobs();
   return g;
 }

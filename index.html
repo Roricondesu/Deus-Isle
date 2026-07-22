@@ -80,6 +80,12 @@
   .res span { min-width:24px; text-align:right; font-variant-numeric:tabular-nums; }
   .res.flash { animation:resFlash .5s; }
   @keyframes resFlash { 0%{ background:rgba(255,220,120,.55);} 100%{ background:rgba(12,16,32,.5);} }
+  .crisis-banner { position:absolute; top:62px; left:50%; transform:translateX(-50%);
+    padding:7px 18px; border-radius:999px; font-size:13px; font-weight:700; letter-spacing:1px;
+    color:#fff; background:linear-gradient(90deg,#d04a3a,#c85a3a); box-shadow:0 0 18px rgba(208,74,58,.55);
+    animation:crisisPulse 1.2s infinite; pointer-events:none; z-index:20; white-space:nowrap; }
+  .crisis-banner.hidden { display:none; }
+  @keyframes crisisPulse { 0%,100%{ box-shadow:0 0 12px rgba(208,74,58,.45);} 50%{ box-shadow:0 0 26px rgba(208,74,58,.95);} }
   #clock { display:inline-flex; align-items:center; justify-content:center; width:34px; height:34px;
     border-radius:999px; background:rgba(12,16,32,.5); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); }
   .icon-btn { width:34px; height:34px; border-radius:999px; border:none;
@@ -307,6 +313,9 @@
     <button class="icon-btn" id="btn-save" title="存档/读档"><iconify-icon icon="mdi:content-save-all"></iconify-icon></button>
     <button class="icon-btn" id="btn-reset" title="重置存档"><iconify-icon icon="mdi:reload"></iconify-icon></button>
   </div>
+
+  <!-- 危机警告横幅 -->
+  <div id="crisis-banner" class="crisis-banner hidden"></div>
 
   <!-- 存档/读档面板 -->
   <div id="save-panel" class="hidden">

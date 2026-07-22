@@ -100,12 +100,14 @@ export interface GodDef {
   cost: number;
   cd: number;
   tip: string;
-  f: () => void;
+  f: () => boolean;
 }
 
 export const GODS: GodDef[] = [
-  { k: 'rain', icon: '🌧️', name: '赐雨', cost: 15, cd: 40, tip: '农田产量×2（60秒）', f() {} },
-  { k: 'meteor', icon: '☄️', name: '流星矿', cost: 25, cd: 60, tip: '天降流星，砸出金币与木材', f() {} },
-  { k: 'bless', icon: '✨', name: '丰收祝福', cost: 20, cd: 35, tip: '立即获得食物与幸福', f() {} },
-  { k: 'haste', icon: '⏳', name: '时光加速', cost: 10, cd: 30, tip: '时间流速×3（25秒）', f() {} },
+  { k: 'rain', icon: '🌧️', name: '赐雨', cost: 15, cd: 40, tip: '农田产量×2（60秒）', f() { return true; } },
+  { k: 'meteor', icon: '☄️', name: '流星矿', cost: 25, cd: 60, tip: '天降流星，砸出金币与木材', f() { return true; } },
+  { k: 'bless', icon: '✨', name: '丰收祝福', cost: 20, cd: 35, tip: '立即获得食物与幸福', f() { return true; } },
+  { k: 'haste', icon: '⏳', name: '时光加速', cost: 10, cd: 30, tip: '时间流速×3（25秒）', f() { return true; } },
+  { k: 'calm', icon: '🌊', name: '平息海啸', cost: 30, cd: 50, tip: '驱散海啸与干旱危机', f() { return true; } },
+  { k: 'heal', icon: '🏥', name: '治愈瘟疫', cost: 35, cd: 55, tip: '治愈所有病人并免疫瘟疫', f() { return true; } },
 ];

@@ -62,6 +62,28 @@ export function toast(txt: string, ico: string = '📢'): void {
   while ($('toasts').children.length > 5) $('toasts').firstChild?.remove();
 }
 
+export function updateCrisisBanner(): void {
+  const el = $('crisis-banner');
+  if (!S.crisis) {
+    el.classList.add('hidden');
+    return;
+  }
+  const names: Record<NonNullable<typeof S.crisis>['type'], string> = {
+    drought: '大旱',
+    tsunami: '海啸',
+    plague: '瘟疫',
+    meteor: '陨石',
+  };
+  const icons: Record<NonNullable<typeof S.crisis>['type'], string> = {
+    drought: '☀️',
+    tsunami: '🌊',
+    plague: '☠️',
+    meteor: '☄️',
+  };
+  el.innerHTML = `${icons[S.crisis.type]} ${names[S.crisis.type]} 正在肆虐 · 剩余 ${Math.ceil(S.crisis.t)} 秒`;
+  el.classList.remove('hidden');
+}
+
 /* ================= HUD 刷新 ================= */
 export function refreshHUD(): void {
   $('r-food').textContent = String(Math.floor(S.food));

@@ -13,6 +13,7 @@ import {
   addPatch,
   landH,
   type CellEntry,
+  type Crisis,
 } from './state';
 import {
   GODS,
@@ -35,7 +36,7 @@ import {
   buildIsland,
   showIslandUnderside,
 } from './environment';
-import { citizens, remeshAllCitizens, type Citizen } from './citizens';
+import { citizens, remeshAllCitizens, assignJobs, removeCitizen, healAll, type Citizen } from './citizens';
 import { makeBuilding } from './buildings';
 import { burst, rainPts } from './particles';
 import { sfx } from './audio';
@@ -47,6 +48,7 @@ import {
   showEraTransition,
   hideEraTransition,
   showVictory,
+  updateCrisisBanner,
 } from './hud';
 import { placeBuilding, highlight } from './interaction';
 import { iconify, icon, IC } from './icon';
@@ -59,7 +61,11 @@ interface EventDef {
   f: () => [string, string] | null;
 }
 
+/** 是否已有危机 */
+function inCrisis(): boolean { return S.crisis !== null; }
+
 export const EVENTS: EventDef[] = [
+  // ---- 正面事件 ----
   {
     w: 3,
     f() {
@@ -92,15 +98,6 @@ export const EVENTS: EventDef[] = [
     },
   },
   {
-    w: 2,
-    f() {
-      const w = randi(15, 30);
-      S.wood += w;
-      S.happy = Math.max(5, S.happy - 4);
-      return ['小型地震！震出矿脉 +' + w + ' 🪵，幸福 -4', '🌋'];
-    },
-  },
-  {
     w: 1,
     f() {
       S.faith += 30;
@@ -116,63 +113,131 @@ export const EVENTS: EventDef[] = [
       return ['遗迹游客络绎不绝，金币 +' + g + ' 🪙', '📸'];
     },
   },
+  // ---- 危机事件（不可叠加）----
+  {
+    w: 2,
+    f() {
+      if (inCrisis() || S.plagueShield > 0) return null;
+      S.crisis = { type: 'plague', t: 45, severity: 0.5 + Math.random() * 0.4 };
+      return ['瘟疫爆发！市民不断病倒，快用神迹治愈', '☠️'];
+    },
+  },
+  {
+    w: 2,
+    f() {
+      if (inCrisis()) return null;
+      S.crisis = { type: 'drought', t: 50, severity: 0.5 + Math.random() * 0.4 };
+      return ['大旱来袭！农田干涸，河流断流', '☀️'];
+    },
+  },
+  {
+    w: 1,
+    f() {
+      if (inCrisis()) return null;
+      S.crisis = { type: 'tsunami', t: 30, severity: 0.6 + Math.random() * 0.3 };
+      addShake(1.2);
+      return ['海啸警报！沿海建筑停产，快平息海浪', '🌊'];
+    },
+  },
+  {
+    w: 1,
+    f() {
+      if (inCrisis()) return null;
+      S.crisis = { type: 'meteor', t: 25, severity: 0.5 + Math.random() * 0.5 };
+      addShake(0.8);
+      castMeteor(true);
+      return ['陨石坠落！小心火灾蔓延', '☄️'];
+    },
+  },
 ];
 
 /* ================= 经济循环 ================= */
 export function econTick(): void {
   const mul = eraMul();
   const rainB = S.buffs.rain > 0 ? 2 : 1;
-  let dFood = 0,
-    dWood = 0,
-    dGold = 0,
-    dFaith = 0,
-    happyT = 52;
-  S.cells.forEach((b) => {
+  const drought = S.crisis?.type === 'drought' ? 1 - S.crisis.severity * 0.7 : 1;
+  const tsunami = S.crisis?.type === 'tsunami' ? 1 - S.crisis.severity * 0.6 : 1;
+  const meteor = S.crisis?.type === 'meteor' ? 1 - S.crisis.severity * 0.5 : 1;
+  let dFood = 0, dWood = 0, dGold = 0, dFaith = 0, happyT = 52;
+
+  S.cells.forEach((b, key) => {
     const m = b.relic ? 0.5 : 1 + b.era * 0.25;
+    const w = (S.jobs.get(key) || []).length; // 工人数
+    const crisisM = b.t === 'farm' ? drought : b.t === 'market' || b.t === 'temple' ? tsunami : meteor;
     switch (b.t) {
       case 'farm':
-        dFood += 0.95 * m * rainB;
+        dFood += 0.6 * m * rainB * drought * (1 + w * 0.7);
         break;
       case 'wood':
-        dWood += 0.6 * m;
+        dWood += 0.35 * m * (1 + w * 0.7);
         break;
       case 'market':
-        dGold += 0.55 * m;
+        dGold += 0.4 * m * tsunami * (1 + w * 0.6);
         happyT += 2;
         break;
       case 'temple':
-        dFaith += 0.24 * m;
+        dFaith += 0.18 * m * tsunami * (1 + w * 0.6);
         happyT += 3;
         break;
       case 'park':
-        happyT += 5;
+        happyT += 3 + w * 2;
         break;
       case 'wonder':
         happyT += 8;
         if (b.relic) dGold += 0.35;
         else dFaith += 0.15;
         break;
+      case 'house':
+        happyT += w * 1.5; // 有居民居住的幸福加成
+        break;
     }
   });
-  dFood -= S.pop * 0.085;
+
+  dFood -= S.pop * 0.09;
   S.food = Math.max(0, S.food + dFood);
   S.wood += dWood;
   S.gold += dGold;
   S.faith += dFaith;
-  happyT += S.food > 0 ? 8 : -16;
-  happyT -= Math.max(0, S.pop - 18) * 0.35;
+
+  // 危机对幸福的影响
+  if (S.crisis) happyT -= S.crisis.severity * 25;
+  // 生病市民
+  const sick = citizens.filter((c) => c.state === 'sick').length;
+  if (sick) happyT -= Math.min(30, sick * 2);
+
+  happyT += S.food > 0 ? 8 : -20;
+  happyT -= Math.max(0, S.pop - popCap()) * 1.2; // 过度拥挤
+  happyT -= Math.max(0, S.pop - 18) * 0.25;
   happyT += S.buffs.rain > 0 ? 3 : 0;
   S.happy = lerp(S.happy, clamp(happyT, 5, 98), 0.06);
+
+  // 瘟疫致命：严重时病人可能死亡
+  if (S.crisis?.type === 'plague' && S.crisis.t > 0) {
+    const dead: Citizen[] = [];
+    for (const c of citizens) {
+      if (c.state === 'sick' && Math.random() < 0.003 * S.crisis.severity) {
+        dead.push(c);
+      }
+    }
+    for (const c of dead) {
+      if (removeCitizen(c.id)) {
+        S.pop = Math.max(0, S.pop - 1);
+        toast(`${c.name} 没能挺过瘟疫`, '💀');
+      }
+    }
+  }
+
   if (Math.random() < 0.3) {
     const arr: { g: THREE.Group; t: string }[] = [];
     S.cells.forEach((b) => {
-      if (!b.relic && (b.t === 'farm' || b.t === 'market' || b.t === 'temple')) {
+      if (!b.relic && (b.t === 'farm' || b.t === 'wood' || b.t === 'market' || b.t === 'temple')) {
         arr.push({ g: b.g, t: b.t });
       }
     });
     if (arr.length) {
       const b = pick(arr);
-      floatText(b.g.position, b.t === 'farm' ? '🌾' : b.t === 'market' ? '🪙' : '✨', '#ffe9b0');
+      const icon = b.t === 'farm' ? '🌾' : b.t === 'wood' ? '🪵' : b.t === 'market' ? '🪙' : '✨';
+      floatText(b.g.position, icon, '#ffe9b0');
     }
   }
 }
@@ -286,17 +351,44 @@ function bindGods(): void {
     S.buffs.rain = 60;
     rainPts.visible = true;
     toast('神迹·赐雨！农田产量翻倍', '🌧️');
+    return true;
   };
-  GODS[1].f = () => castMeteor();
+  GODS[1].f = () => {
+    castMeteor();
+    return true;
+  };
   GODS[2].f = () => {
     S.food += 55;
     S.happy = Math.min(98, S.happy + 5);
     burst(V3(0, 2, 0), 0xffe98a, 80, 10, 1.8, 2, 7);
     toast('神迹·丰收！食物 +55', '✨');
+    return true;
   };
   GODS[3].f = () => {
     S.buffs.haste = 25;
     toast('神迹·时光加速！', '⏳');
+    return true;
+  };
+  GODS[4].f = () => {
+    if (!S.crisis || (S.crisis.type !== 'drought' && S.crisis.type !== 'tsunami')) {
+      toast('当前没有海啸或干旱可平息', '⚠️');
+      return false;
+    }
+    S.crisis = null;
+    hideTsunamiWave();
+    toast('神迹·平息！海啸与干旱已退去', '🌊');
+    updateCrisisBanner();
+    return true;
+  };
+  GODS[5].f = () => {
+    healAll();
+    S.plagueShield = 90;
+    if (S.crisis?.type === 'plague') {
+      S.crisis = null;
+    }
+    toast('神迹·治愈！瘟疫退散，市民获得免疫', '🏥');
+    updateCrisisBanner();
+    return true;
   };
 }
 bindGods();
@@ -315,13 +407,66 @@ export function castGod(k: string): void {
   }
   S.faith -= g.cost;
   S.cds[k] = g.cd;
-  g.f();
+  if (g.f() === false) {
+    // 神迹未生效，退还消耗与冷却
+    S.faith += g.cost;
+    S.cds[k] = 0;
+    return;
+  }
   sfx.miracle();
   refreshHUD();
   renderDock();
 }
 
-function castMeteor(): void {
+/* ================= 危机系统 ================= */
+const tsunamiWave = new THREE.Mesh(
+  new THREE.RingGeometry(1, 1.06, 64),
+  new THREE.MeshBasicMaterial({ color: 0xc8f0ff, transparent: true, opacity: 0, side: THREE.DoubleSide }),
+);
+tsunamiWave.rotation.x = -Math.PI / 2;
+tsunamiWave.position.y = -0.25;
+scene.add(tsunamiWave);
+
+function showTsunamiWave(): void {
+  tsunamiWave.visible = true;
+}
+function hideTsunamiWave(): void {
+  tsunamiWave.visible = false;
+}
+
+export function updateCrisis(dt: number): void {
+  if (S.plagueShield > 0) S.plagueShield = Math.max(0, S.plagueShield - dt);
+
+  if (!S.crisis) {
+    hideTsunamiWave();
+    return;
+  }
+
+  S.crisis.t -= dt;
+  const type = S.crisis.type;
+
+  if (type === 'tsunami') {
+    showTsunamiWave();
+    const progress = Math.min(1, Math.max(0, S.crisis.t / 35));
+    const scale = 10 + (1 - progress) * 32;
+    tsunamiWave.scale.setScalar(scale);
+    (tsunamiWave.material as THREE.MeshBasicMaterial).opacity = 0.2 + S.crisis.severity * 0.35 + Math.sin(S.crisis.t * 3) * 0.05;
+  } else {
+    hideTsunamiWave();
+  }
+
+  updateCrisisBanner();
+
+  if (S.crisis.t <= 0) {
+    const names: Record<Crisis['type'], string> = { drought: '大旱', tsunami: '海啸', plague: '瘟疫', meteor: '陨石' };
+    toast(`${names[type]} 已经平息`, '✅');
+    S.crisis = null;
+    hideTsunamiWave();
+    updateCrisisBanner();
+  }
+}
+
+function castMeteor(isCrisis: boolean = false): void {
   const a = rand(Math.PI * 2);
   const d = rand(R() * 0.7);
   const tx = Math.cos(a) * d;
@@ -345,12 +490,18 @@ function castMeteor(): void {
       burst(V3(tx, 0.5, tz), 0xffe98a, 30, 5, 1, -2, 5);
       addShake(0.6);
       sfx.boom();
-      const gold = randi(30, 55);
-      const wood = randi(15, 30);
-      S.gold += gold;
-      S.wood += wood;
-      floatText(V3(tx, 0, tz), '+' + gold + ' 🪙 +' + wood + ' 🪵', '#ffd76a');
-      toast('流星坠岛！砸出矿藏', '☄️');
+      if (isCrisis) {
+        // 危机陨石只造成视觉与停产，不摧毁任何建筑
+        burst(V3(tx, 0.5, tz), 0xff5a3a, 16, 4, 1.2, 2, 5);
+        toast('陨石坠岛！建筑停产，地标无损', '☄️');
+      } else {
+        const gold = randi(30, 55);
+        const wood = randi(15, 30);
+        S.gold += gold;
+        S.wood += wood;
+        floatText(V3(tx, 0, tz), '+' + gold + ' 🪙 +' + wood + ' 🪵', '#ffd76a');
+        toast('流星坠岛！砸出矿藏', '☄️');
+      }
       refreshHUD();
     },
   );

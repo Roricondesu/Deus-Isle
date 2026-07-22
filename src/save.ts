@@ -1,7 +1,8 @@
-import { S, SEED, PATCHES, setSeed, setPatches, type Patch } from './state';
+import { S, SEED, PATCHES, setSeed, setPatches, type Patch, type Crisis } from './state';
 import { setPaletteSync } from './environment';
 import { buildIsland } from './environment';
 import { placeBuilding } from './interaction';
+import { citizens, clearCitizens, loadCitizen, assignJobs, type SerializedCitizen } from './citizens';
 
 /* ================= 本地存档（localStorage） ================= */
 
@@ -26,6 +27,9 @@ interface SaveData {
   cells: { x: number; z: number; t: string; e: number; r: 0 | 1 }[];
   seed: number;
   patches: Patch[];
+  crisis: Crisis | null;
+  plagueShield: number;
+  citizens: SerializedCitizen[];
   // 手动存档额外字段
   savedAt?: number;     // 保存时间戳
   note?: string;        // 备注（自动生成）
@@ -38,6 +42,20 @@ function collectSave(): SaveData {
     const [x, z] = k.split(',').map(Number);
     cells.push({ x, z, t: b.t, e: b.era, r: b.relic ? 1 : 0 });
   });
+  const citizenData: SerializedCitizen[] = [];
+  for (const c of citizens) {
+    citizenData.push({
+      id: c.id,
+      name: c.name,
+      age: c.age,
+      state: c.state,
+      job: c.job,
+      jobKey: c.jobKey,
+      homeKey: c.homeKey,
+      x: c.g.position.x,
+      z: c.g.position.z,
+    });
+  }
   return {
     era: S.era,
     food: S.food,
@@ -53,6 +71,9 @@ function collectSave(): SaveData {
     cells,
     seed: SEED,
     patches: PATCHES.map((p) => ({ ...p })),
+    crisis: S.crisis,
+    plagueShield: S.plagueShield,
+    citizens: citizenData,
     savedAt: Date.now(),
   };
 }
@@ -72,12 +93,25 @@ function applySave(d: SaveData): void {
     playTime: d.playTime || 0,
   });
   S.wonders = d.wonders || {};
+  S.crisis = d.crisis ?? null;
+  S.plagueShield = d.plagueShield ?? 0;
   // 还原地形种子和填海地块
   if (typeof d.seed === 'number') setSeed(d.seed);
   if (Array.isArray(d.patches)) setPatches(d.patches.map((p) => ({ ...p })));
   setPaletteSync(S.era);
   buildIsland();
-  d.cells.forEach((c) => placeBuilding(c.t, c.e, c.x, c.z, !!c.r));
+  d.cells.forEach((c) => placeBuilding(c.t, c.e, c.x, c.z, !!c.r, false, false));
+  // 还原市民个体
+  clearCitizens();
+  const citizenArr = Array.isArray(d.citizens) ? d.citizens : [];
+  if (citizenArr.length) {
+    for (const c of citizenArr) loadCitizen(c);
+  } else {
+    for (let i = 0; i < S.pop; i++) {
+      // spawnCitizen 由 updateCitizens 在下一帧补齐，这里不需要额外生成
+    }
+  }
+  assignJobs();
 }
 
 /* ================= 自动存档 ================= */

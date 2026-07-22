@@ -641,6 +641,10 @@ export function dayNight(): void {
   starMat.opacity = 1 - dayF;
   WIN_MAT.color.set(dayF > 0.5 ? 0x46586a : 0xffd77a);
   waterMat.color.copy(PAL.water).multiplyScalar(0.35 + 0.65 * dayF);
+  if (S.crisis?.type === 'drought') {
+    const droughtCol = new THREE.Color(0x9a7a4a);
+    waterMat.color.lerp(droughtCol, S.crisis.severity * 0.55);
+  }
   $('clock').innerHTML = icon(dayF > 0.6 ? IC.sun : duskF > 0.5 ? IC.sunset : IC.moon);
 }
 
@@ -654,13 +658,15 @@ export function paletteLerp(dt: number): void {
 
 /* ================= 环境动效：水波 / 云 / 船 / 鸟 / 部件动画 ================= */
 export function waterWave(t: number): void {
+  const tsunami = S.crisis?.type === 'tsunami' ? S.crisis.severity : 0;
+  const amp = 0.12 + tsunami * 0.42;
   const p = waterGeo.attributes.position.array as Float32Array;
   for (let i = 0; i < p.length; i += 3) {
-    p[i + 2] = Math.sin(p[i] * 0.14 + t * 1.1) * 0.12 + Math.cos(p[i + 1] * 0.12 + t * 0.9) * 0.12;
+    p[i + 2] = Math.sin(p[i] * 0.14 + t * (1.1 + tsunami * 2)) * amp + Math.cos(p[i + 1] * 0.12 + t * (0.9 + tsunami * 1.5)) * amp;
   }
   waterGeo.attributes.position.needsUpdate = true;
-  foamMeshes.forEach((f) => f.scale.setScalar(1 + Math.sin(t * 1.4) * 0.02));
-  foamMat.opacity = 0.32 + Math.sin(t * 1.4) * 0.12;
+  foamMeshes.forEach((f) => f.scale.setScalar(1 + Math.sin(t * (1.4 + tsunami * 3)) * (0.02 + tsunami * 0.08)));
+  foamMat.opacity = 0.32 + Math.sin(t * (1.4 + tsunami * 3)) * (0.12 + tsunami * 0.18);
 }
 
 export function envMove(dt: number, t: number): void {
