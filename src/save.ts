@@ -24,7 +24,7 @@ interface SaveData {
   dayTime: number;
   playTime: number;
   wonders: Record<number, boolean>;
-  cells: { x: number; z: number; t: string; e: number; r: 0 | 1 }[];
+  cells: { x: number; z: number; t: string; e: number; r: 0 | 1; lv?: number }[];
   seed: number;
   patches: Patch[];
   crisis: Crisis | null;
@@ -42,7 +42,7 @@ function collectSave(): SaveData {
   const cells: SaveData['cells'] = [];
   S.cells.forEach((b, k) => {
     const [x, z] = k.split(',').map(Number);
-    cells.push({ x, z, t: b.t, e: b.era, r: b.relic ? 1 : 0 });
+    cells.push({ x, z, t: b.t, e: b.era, r: b.relic ? 1 : 0, lv: b.level });
   });
   const citizenData: SerializedCitizen[] = [];
   for (const c of citizens) {
@@ -109,7 +109,11 @@ function applySave(d: SaveData): void {
   if (Array.isArray(d.patches)) setPatches(d.patches.map((p) => ({ ...p })));
   setPaletteSync(S.era);
   buildIsland();
-  d.cells.forEach((c) => placeBuilding(c.t, c.e, c.x, c.z, !!c.r, false, false));
+  d.cells.forEach((c) => {
+    placeBuilding(c.t, c.e, c.x, c.z, !!c.r, false, false);
+    const entry = S.cells.get(c.x + ',' + c.z);
+    if (entry) entry.level = c.lv || 1;
+  });
   // 还原市民个体
   clearCitizens();
   const citizenArr = Array.isArray(d.citizens) ? d.citizens : [];

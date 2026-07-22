@@ -179,7 +179,7 @@ export function econTick(): void {
   const fMul = farmMul(), wMul = woodMul(), mMul = marketMul(), tMul = templeMul();
 
   S.cells.forEach((b, key) => {
-    const m = b.relic ? 0.5 : 1 + b.era * 0.25;
+    const m = b.relic ? 0.5 : (1 + b.era * 0.25) * (1 + (b.level - 1) * 0.2);
     const w = (S.jobs.get(key) || []).length; // 工人数
     const crisisM = b.t === 'farm' ? drought : b.t === 'market' || b.t === 'temple' ? tsunami : meteor;
     switch (b.t) {
@@ -620,37 +620,66 @@ function morphBuildings(): void {
 let upgradeAcc = 0;
 const UPGRADE_INTERVAL = 6; // 每 6 秒尝试一次自动升级
 const UPGRADE_RATIO = 0.5;  // 升级消耗 = 该建筑原始 cost 的 50%
+const MAX_LEVEL = 5;        // 建筑最高等级（满级 +100% 收益）
 
 export function autoUpgradeTick(dt: number): void {
-  if (S.era < 1 || S.transitioning || S.over) return;
+  if (S.transitioning || S.over) return;
   upgradeAcc += dt;
   if (upgradeAcc < UPGRADE_INTERVAL) return;
   upgradeAcc = 0;
-  // 找出所有「年代落后于当前时代」的可升级建筑
-  const candidates: { key: string; b: CellEntry; def: BuildingDef }[] = [];
+
+  // 1. 优先：时代落后的建筑升级到当前时代外观（需 era>=1）
+  if (S.era >= 1) {
+    const eraCands: { key: string; b: CellEntry; def: BuildingDef }[] = [];
+    S.cells.forEach((b, key) => {
+      if (b.relic || b.t === 'wonder') return;
+      if (b.era >= S.era) return;
+      const def = CATALOG.find((d) => d.t === b.t);
+      if (def) eraCands.push({ key, b, def });
+    });
+    if (eraCands.length) {
+      const { key, b, def } = pick(eraCands);
+      const cm = costMul();
+      const cost: [number, number, number] = [
+        Math.ceil(def.cost[0] * UPGRADE_RATIO * cm),
+        Math.ceil(def.cost[1] * UPGRADE_RATIO * cm),
+        Math.ceil(def.cost[2] * UPGRADE_RATIO * cm),
+      ];
+      if (canAfford(cost)) {
+        pay(cost);
+        upgradeBuildingMesh(b, key, S.era);
+        floatText(b.g.position, icon(IC.arrowUp) + ' 升级→' + ERAS[S.era].name, '#9fd8ff');
+        refreshHUD();
+        return;
+      }
+    }
+  }
+
+  // 2. 其次：资源充足时提升建筑等级（每级 +20% 收益）
+  const lvlCands: { key: string; b: CellEntry; def: BuildingDef }[] = [];
   S.cells.forEach((b, key) => {
     if (b.relic || b.t === 'wonder') return;
-    if (b.era >= S.era) return;
+    if (b.level >= MAX_LEVEL) return;
     const def = CATALOG.find((d) => d.t === b.t);
-    if (def) candidates.push({ key, b, def });
+    if (def) lvlCands.push({ key, b, def });
   });
-  if (!candidates.length) return;
-  const { key, b, def } = pick(candidates);
+  if (!lvlCands.length) return;
+  const { b, def } = pick(lvlCands);
   const cm = costMul();
   const cost: [number, number, number] = [
     Math.ceil(def.cost[0] * UPGRADE_RATIO * cm),
     Math.ceil(def.cost[1] * UPGRADE_RATIO * cm),
     Math.ceil(def.cost[2] * UPGRADE_RATIO * cm),
   ];
-  // 资源不够就等下一轮
   if (!canAfford(cost)) return;
   pay(cost);
-  upgradeBuildingMesh(b, key, S.era);
-  floatText(
-    b.g.position,
-    icon(IC.arrowUp) + ' 升级→' + ERAS[S.era].name,
-    '#9fd8ff',
-  );
+  b.level++;
+  // 升级特效：粒子 + 短暂放大脉冲
+  burst(b.g.position.clone().add(V3(0, 1, 0)), 0xffe98a, 16, 3, 0.9, -2, 4);
+  const baseScale = b.g.scale.x;
+  tw(0.45, (k) => b.g.scale.setScalar(baseScale * (1 + 0.25 * Math.sin(k * Math.PI))), (t) => t);
+  floatText(b.g.position, icon(IC.arrowUp) + ' Lv.' + b.level + ' · 收益 +20%', '#ffe98a');
+  sfx.pop();
   refreshHUD();
 }
 

@@ -9,6 +9,7 @@ export interface CellEntry {
   era: number;
   relic: boolean;
   g: THREE.Group;
+  level: number; // 建筑等级（1 起，每级 +20% 收益）
 }
 
 /* 危机状态（单一、带剩余时间） */

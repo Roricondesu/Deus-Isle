@@ -260,7 +260,7 @@ export function placeBuilding(
   islandGroup.add(g);
   tw(slow ? 2.2 : 0.7, (k) => g.scale.setScalar(Math.max(0.01, k)), slow ? (k) => k : easeOutBack);
   burst(V3(x * CELL, cellY(x, z) + 0.4, z * CELL), 0xcfc0a0, 16, 3, 0.8, -5, 3);
-  const entry: CellEntry = { t, era: e, relic, g };
+  const entry: CellEntry = { t, era: e, relic, g, level: 1 };
   S.cells.set(cellKey(x, z), entry);
   scheduleRebuildRoads();
   if (assign) assignJobs();
