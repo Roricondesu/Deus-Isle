@@ -1,0 +1,282 @@
+{
+  "loading": {
+    "loadingVisible": null,
+    "titleText": "",
+    "titleColor": "",
+    "titleFontWeight": "",
+    "titleLetterSpacing": "",
+    "titleFontSize": "",
+    "barBg": "",
+    "barBorder": "",
+    "barWidth": "",
+    "barHeight": "",
+    "barInnerBg": "",
+    "barInnerWidth": "",
+    "bodyBg": "rgb(7, 9, 15)",
+    "onlyLoaderChildren": []
+  },
+  "menu": {
+    "introVisible": true,
+    "introBg": "rgba(5, 7, 12, 0.7)",
+    "introBackdrop": "blur(10px)",
+    "enText": "DEUS ISLE",
+    "enColor": "rgba(255, 255, 255, 0.92)",
+    "enFontWeight": "300",
+    "zhText": "神明小岛",
+    "zhColor": "rgba(255, 255, 255, 0.42)",
+    "links": [
+      {
+        "text": "Start Game",
+        "color": "rgba(255, 255, 255, 0.42)",
+        "fontWeight": "300",
+        "letterSpacing": "3.3px",
+        "background": "rgba(0, 0, 0, 0) none repeat scroll 0% 0% / auto padding-box border-box",
+        "border": "0px none rgba(255, 255, 255, 0.42)"
+      },
+      {
+        "text": "Load Save",
+        "color": "rgba(255, 255, 255, 0.42)",
+        "fontWeight": "300",
+        "letterSpacing": "3.3px",
+        "background": "rgba(0, 0, 0, 0) none repeat scroll 0% 0% / auto padding-box border-box",
+        "border": "0px none rgba(255, 255, 255, 0.42)"
+      },
+      {
+        "text": "Settings",
+        "color": "rgba(255, 255, 255, 0.42)",
+        "fontWeight": "300",
+        "letterSpacing": "3.3px",
+        "background": "rgba(0, 0, 0, 0) none repeat scroll 0% 0% / auto padding-box border-box",
+        "border": "0px none rgba(255, 255, 255, 0.42)"
+      },
+      {
+        "text": "About",
+        "color": "rgba(255, 255, 255, 0.42)",
+        "fontWeight": "300",
+        "letterSpacing": "3.3px",
+        "background": "rgba(0, 0, 0, 0) none repeat scroll 0% 0% / auto padding-box border-box",
+        "border": "0px none rgba(255, 255, 255, 0.42)"
+      }
+    ]
+  },
+  "hud": {
+    "uiVisible": true,
+    "eraBadge": {
+      "bg": "rgba(255, 255, 255, 0.04)",
+      "border": "1px solid rgba(255, 255, 255, 0.06)",
+      "name": "远古时期",
+      "nameColor": "rgba(255, 255, 255, 0.92)",
+      "nameFontWeight": "600"
+    },
+    "resources": [
+      {
+        "label": "食物",
+        "text": "40",
+        "color": "rgba(255, 255, 255, 0.92)",
+        "bg": "rgba(255, 255, 255, 0.04)",
+        "border": "1px solid rgba(255, 255, 255, 0.06)"
+      },
+      {
+        "label": "木材",
+        "text": "60",
+        "color": "rgba(255, 255, 255, 0.92)",
+        "bg": "rgba(255, 255, 255, 0.04)",
+        "border": "1px solid rgba(255, 255, 255, 0.06)"
+      },
+      {
+        "label": "金币",
+        "text": "50",
+        "color": "rgba(255, 255, 255, 0.92)",
+        "bg": "rgba(255, 255, 255, 0.04)",
+        "border": "1px solid rgba(255, 255, 255, 0.06)"
+      },
+      {
+        "label": "信仰",
+        "text": "15",
+        "color": "rgba(255, 255, 255, 0.92)",
+        "bg": "rgba(255, 255, 255, 0.04)",
+        "border": "1px solid rgba(255, 255, 255, 0.06)"
+      },
+      {
+        "label": "人口 / 容量",
+        "text": "3/8",
+        "color": "rgba(255, 255, 255, 0.92)",
+        "bg": "rgba(255, 255, 255, 0.04)",
+        "border": "1px solid rgba(255, 255, 255, 0.06)"
+      },
+      {
+        "label": "幸福度",
+        "text": "70",
+        "color": "rgba(255, 255, 255, 0.92)",
+        "bg": "rgba(255, 255, 255, 0.04)",
+        "border": "1px solid rgba(255, 255, 255, 0.06)"
+      }
+    ],
+    "taskPanel": {
+      "top": "56px",
+      "left": "10px",
+      "bg": "rgba(255, 255, 255, 0.04)",
+      "border": "1px solid rgba(255, 255, 255, 0.06)",
+      "headText": "Quests",
+      "headColor": "rgba(255, 255, 255, 0.42)",
+      "headTextTransform": "uppercase",
+      "childCount": 3
+    },
+    "skillBar": {
+      "childCount": 0,
+      "top": "56px",
+      "right": "10px"
+    },
+    "bCards": [
+      {
+        "name": "茅屋",
+        "sel": false,
+        "nameColor": "rgba(255, 255, 255, 0.92)",
+        "cardBg": "rgba(0, 0, 0, 0)",
+        "cardBorder": "1px solid rgba(0, 0, 0, 0)"
+      },
+      {
+        "name": "采集地",
+        "sel": false,
+        "nameColor": "rgba(255, 255, 255, 0.92)",
+        "cardBg": "rgba(0, 0, 0, 0)",
+        "cardBorder": "1px solid rgba(0, 0, 0, 0)"
+      },
+      {
+        "name": "伐木场",
+        "sel": false,
+        "nameColor": "rgba(255, 255, 255, 0.92)",
+        "cardBg": "rgba(0, 0, 0, 0)",
+        "cardBorder": "1px solid rgba(0, 0, 0, 0)"
+      },
+      {
+        "name": "以物易市",
+        "sel": false,
+        "nameColor": "rgba(255, 255, 255, 0.92)",
+        "cardBg": "rgba(0, 0, 0, 0)",
+        "cardBorder": "1px solid rgba(0, 0, 0, 0)"
+      },
+      {
+        "name": "图腾祭坛",
+        "sel": false,
+        "nameColor": "rgba(255, 255, 255, 0.92)",
+        "cardBg": "rgba(0, 0, 0, 0)",
+        "cardBorder": "1px solid rgba(0, 0, 0, 0)"
+      },
+      {
+        "name": "圣地林苑",
+        "sel": false,
+        "nameColor": "rgba(255, 255, 255, 0.92)",
+        "cardBg": "rgba(0, 0, 0, 0)",
+        "cardBorder": "1px solid rgba(0, 0, 0, 0)"
+      },
+      {
+        "name": "巨石图腾阵",
+        "sel": false,
+        "nameColor": "rgba(255, 255, 255, 0.92)",
+        "cardBg": "rgba(0, 0, 0, 0)",
+        "cardBorder": "1px solid rgba(0, 0, 0, 0)"
+      }
+    ],
+    "godBtns": [
+      {
+        "label": "赐雨",
+        "color": "rgba(255, 255, 255, 0.92)",
+        "bg": "rgba(255, 255, 255, 0.04)",
+        "border": "1px solid rgba(255, 255, 255, 0.06)"
+      },
+      {
+        "label": "流星矿",
+        "color": "rgba(255, 255, 255, 0.92)",
+        "bg": "rgba(255, 255, 255, 0.04)",
+        "border": "1px solid rgba(255, 255, 255, 0.06)"
+      },
+      {
+        "label": "丰收祝福",
+        "color": "rgba(255, 255, 255, 0.92)",
+        "bg": "rgba(255, 255, 255, 0.04)",
+        "border": "1px solid rgba(255, 255, 255, 0.06)"
+      },
+      {
+        "label": "时光加速",
+        "color": "rgba(255, 255, 255, 0.92)",
+        "bg": "rgba(255, 255, 255, 0.04)",
+        "border": "1px solid rgba(255, 255, 255, 0.06)"
+      },
+      {
+        "label": "平息海啸",
+        "color": "rgba(255, 255, 255, 0.92)",
+        "bg": "rgba(255, 255, 255, 0.04)",
+        "border": "1px solid rgba(255, 255, 255, 0.06)"
+      },
+      {
+        "label": "治愈瘟疫",
+        "color": "rgba(255, 255, 255, 0.92)",
+        "bg": "rgba(255, 255, 255, 0.04)",
+        "border": "1px solid rgba(255, 255, 255, 0.06)"
+      }
+    ],
+    "actBtns": [
+      {
+        "text": "填海扩岛80 60",
+        "color": "rgba(255, 255, 255, 0.92)",
+        "bg": "rgba(255, 255, 255, 0.04)",
+        "border": "1px solid rgba(255, 255, 255, 0.06)",
+        "disabled": true
+      },
+      {
+        "text": "时代跃迁3/8 · 50/50 · 未建奇观",
+        "color": "rgba(255, 255, 255, 0.92)",
+        "bg": "rgba(255, 255, 255, 0.04)",
+        "border": "1px solid rgba(255, 255, 255, 0.06)",
+        "disabled": true
+      }
+    ],
+    "buttonsExist": {
+      "collapseRes": true,
+      "pause": true,
+      "bottomToggle": true
+    }
+  },
+  "bottomCollapse": {
+    "collapsed": true
+  },
+  "resCollapse": {
+    "collapsed": true
+  },
+  "pause": {
+    "visible": true,
+    "overlayBg": "rgba(5, 7, 12, 0.85)",
+    "overlayBackdrop": "blur(8px)",
+    "titleText": "PAUSED",
+    "titleColor": "rgba(255, 255, 255, 0.22)",
+    "titleTextTransform": "uppercase",
+    "titleLetterSpacing": "6.6px",
+    "links": [
+      {
+        "text": "继续游戏",
+        "color": "rgba(255, 255, 255, 0.42)",
+        "background": "rgba(0, 0, 0, 0) none repeat scroll 0% 0% / auto padding-box border-box",
+        "border": "0px none rgba(255, 255, 255, 0.42)"
+      },
+      {
+        "text": "存档 / 读档",
+        "color": "rgba(255, 255, 255, 0.42)",
+        "background": "rgba(0, 0, 0, 0) none repeat scroll 0% 0% / auto padding-box border-box",
+        "border": "0px none rgba(255, 255, 255, 0.42)"
+      },
+      {
+        "text": "返回主菜单",
+        "color": "rgba(255, 255, 255, 0.42)",
+        "background": "rgba(0, 0, 0, 0) none repeat scroll 0% 0% / auto padding-box border-box",
+        "border": "0px none rgba(255, 255, 255, 0.42)"
+      }
+    ]
+  },
+  "colorAudit": [],
+  "dockClick": {
+    "ok": true,
+    "sel": false,
+    "name": "茅屋"
+  }
+}

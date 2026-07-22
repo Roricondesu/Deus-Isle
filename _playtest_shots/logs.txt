@@ -1,0 +1,6 @@
+[PAGEERROR] Cannot read properties of null (reading 'appendChild')
+TypeError: Cannot read properties of null (reading 'appendChild')
+    at <anonymous> (:7:49)
+    at <anonymous> (:8:5)
+[c.debug] [vite] connecting...
+[c.debug] [vite] connected.
