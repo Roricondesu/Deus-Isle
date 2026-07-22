@@ -54,15 +54,31 @@ let saveAcc = 0;
 let evtAcc = 20;
 let prayAcc = 8;
 let hudAcc = 0;
+let paused = false;
+
+export function isPaused(): boolean { return paused; }
+
+export function togglePause(): void {
+  if (!S.started || S.over || S.transitioning) return;
+  paused = !paused;
+  const ov = $('overlay-pause');
+  if (paused) {
+    ov.classList.remove('hidden');
+    controls.autoRotate = false;
+  } else {
+    ov.classList.add('hidden');
+    controls.autoRotate = settings.autoRotate;
+  }
+}
 
 function loop(): void {
   requestAnimationFrame(loop);
   const dt = Math.min(clock.getDelta(), 0.05);
   const t = clock.elapsedTime;
-  const spd = S.timeScale * (S.buffs.haste > 0 ? 3 : 1);
+  const spd = paused ? 0 : S.timeScale * (S.buffs.haste > 0 ? 3 : 1);
   const gdt = dt * spd;
   updateTweens(dt);
-  if (S.started && !S.over) {
+  if (S.started && !S.over && !paused) {
     S.playTime += gdt;
     S.dayTime = (S.dayTime + gdt / 130) % 1;
     for (const k in S.cds) S.cds[k] = Math.max(0, S.cds[k] - dt);
@@ -140,8 +156,9 @@ function bindButtons(): void {
   // 静音切换
   setupAudioToggle();
 
-  // 重置存档
-  $('btn-reset').onclick = () => {
+  // 重置存档（按钮可能在暂停菜单或顶栏，做空值保护）
+  const btnReset = document.getElementById('btn-reset');
+  if (btnReset) btnReset.onclick = () => {
     if (confirm('确定要重置文明、清空存档吗？')) {
       clearSave();
       location.reload();
@@ -159,9 +176,46 @@ function bindButtons(): void {
   $('save-panel').onclick = (e) => {
     if (e.target === $('save-panel')) hideSavePanel();
   };
-  // Esc 关闭面板
+
+  // 暂停按钮
+  $('btn-pause').onclick = () => togglePause();
+
+  // 暂停覆盖层选项
+  $('overlay-pause').addEventListener('click', (e) => {
+    const target = e.target as HTMLElement;
+    const act = target.dataset.pause;
+    if (!act) return;
+    if (act === 'resume') togglePause();
+    else if (act === 'save') { togglePause(); showSavePanel(); }
+    else if (act === 'quit') {
+      paused = false;
+      $('overlay-pause').classList.add('hidden');
+      saveGame();
+      S.started = false;
+      S.over = false;
+      location.reload();
+    }
+  });
+
+  // 折叠：资源条
+  $('btn-collapse-res').onclick = () => {
+    const left = $('topbar-left');
+    left.classList.toggle('collapsed');
+    const icon_el = $('btn-collapse-res').querySelector('iconify-icon');
+    if (icon_el) icon_el.setAttribute('icon', left.classList.contains('collapsed') ? 'mdi:chevron-down' : 'mdi:chevron-up');
+  };
+
+  // 折叠：底栏
+  $('bottombar-toggle').onclick = () => {
+    $('bottombar').classList.toggle('collapsed');
+  };
+
+  // Esc 键：暂停 / 关闭面板
   addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') hideSavePanel();
+    if (e.key === 'Escape') {
+      if (!$('save-panel').classList.contains('hidden')) { hideSavePanel(); return; }
+      if (S.started && !S.over) togglePause();
+    }
   });
 
   // 时代跃迁

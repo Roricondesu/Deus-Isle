@@ -66,6 +66,8 @@ export const IC = {
   chat: 'mdi:chat',
   sprout: 'mdi:sprout',
   scroll: 'mdi:scroll',
+  chevronDown: 'mdi:chevron-down',
+  pause: 'mdi:pause',
 } as const;
 
 export type IconName = (typeof IC)[keyof typeof IC];

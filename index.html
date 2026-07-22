@@ -281,24 +281,51 @@
   .v-stat { text-align:center; } .v-stat b { display:block; font-size:34px; color:#ffe9b0; }
   .v-stat span { color:rgba(255,255,255,.55); font-size:12px; letter-spacing:2px; }
 
-  /* ---------- 中间任务清单 / 技能条 ---------- */
-  #skill-bar { position:absolute; top:90px; left:50%; transform:translateX(-50%); display:flex; gap:6px; flex-wrap:wrap; justify-content:center; max-width:min(520px,92vw); pointer-events:none; z-index:12; }
+  /* ---------- 左侧任务清单 / 右侧技能条 ---------- */
+  #skill-bar { position:absolute; top:50px; right:8px; display:flex; flex-direction:column; gap:4px; align-items:flex-end; max-width:min(200px,50vw); pointer-events:none; z-index:12; }
   .skill-chip { display:inline-flex; align-items:center; gap:4px; padding:3px 8px; border-radius:999px; background:rgba(12,16,32,.5); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); color:#ffe9b0; font-size:10px; font-weight:600; pointer-events:auto; }
   .skill-chip iconify-icon { width:12px; height:12px; }
-  #task-panel { position:absolute; top:116px; left:50%; transform:translateX(-50%); width:min(420px,92vw); max-height:min(240px,38vh); overflow-y:auto; padding:12px 14px; z-index:12; }
+  #task-panel { position:absolute; top:50px; left:8px; width:min(240px,68vw); max-height:min(300px,50vh); overflow-y:auto; padding:10px 12px; z-index:12; transition:transform .25s, max-height .25s; }
   #ui.ui-hidden #task-panel { pointer-events:none; }
-  #task-panel .task-head { display:flex; align-items:center; gap:6px; color:#ffe9b0; font-size:13px; font-weight:700; letter-spacing:2px; margin-bottom:8px; }
-  #task-panel .task-head iconify-icon { width:16px; height:16px; }
-  #task-panel .task-list { display:flex; flex-direction:column; gap:6px; }
-  .task-item { display:flex; align-items:center; gap:8px; padding:8px 10px; border-radius:10px; background:rgba(255,255,255,.06); color:#fff; font-size:12px; transition:.2s; }
-  .task-item.done { opacity:.55; }
-  .task-item.done .task-text { text-decoration:line-through; color:rgba(255,255,255,.6); }
-  .task-icon { color:#8ad0ff; font-size:16px; display:flex; }
-  .task-icon iconify-icon { width:16px; height:16px; }
-  .task-text { flex:1; }
-  .task-check { margin-left:auto; color:#5affa0; font-size:16px; display:flex; }
-  .task-check iconify-icon { width:16px; height:16px; }
-  .task-empty { color:rgba(255,255,255,.45); text-align:center; font-size:12px; padding:8px; }
+  #task-panel.collapsed { max-height:38px; overflow:hidden; }
+  #task-panel .task-head { display:flex; align-items:center; gap:6px; color:#ffe9b0; font-size:12px; font-weight:700; letter-spacing:1px; cursor:pointer; user-select:none; }
+  #task-panel .task-head iconify-icon { width:14px; height:14px; }
+  #task-panel .task-head .task-toggle { margin-left:auto; opacity:.5; transition:transform .25s; }
+  #task-panel.collapsed .task-head .task-toggle { transform:rotate(-90deg); }
+  #task-panel .task-list { display:flex; flex-direction:column; gap:5px; margin-top:8px; }
+  #task-panel.collapsed .task-list { display:none; }
+  .task-item { display:flex; align-items:center; gap:7px; padding:6px 8px; border-radius:8px; background:rgba(255,255,255,.06); color:#fff; font-size:11px; transition:.2s; }
+  .task-item.done { opacity:.5; }
+  .task-item.done .task-text { text-decoration:line-through; color:rgba(255,255,255,.5); }
+  .task-icon { color:#8ad0ff; display:flex; }
+  .task-icon iconify-icon { width:14px; height:14px; }
+  .task-text { flex:1; line-height:1.3; }
+  .task-check { color:#5affa0; display:flex; }
+  .task-check iconify-icon { width:14px; height:14px; }
+  .task-empty { color:rgba(255,255,255,.4); text-align:center; font-size:11px; padding:6px; }
+
+  /* ---------- 折叠功能 ---------- */
+  #topbar-left.collapsed .res { display:none; }
+  #bottombar.collapsed { transform:translateY(calc(100% + 12px)); }
+  .collapse-toggle { cursor:pointer; opacity:.5; transition:opacity .2s; }
+  .collapse-toggle:hover { opacity:1; }
+  .collapse-toggle iconify-icon { width:16px; height:16px; }
+  #bottombar-toggle { position:absolute; left:50%; bottom:8px; transform:translateX(-50%); width:36px; height:22px; border-radius:12px 12px 0 0; border:none;
+    background:rgba(12,16,32,.6); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); color:#fff; cursor:pointer; z-index:11;
+    display:flex; align-items:center; justify-content:center; transition:.2s; pointer-events:auto; }
+  #bottombar-toggle iconify-icon { width:18px; height:18px; }
+  #bottombar.collapsed ~ #bottombar-toggle iconify-icon { transform:rotate(180deg); }
+  #bottombar-toggle { pointer-events:auto; }
+
+  /* ---------- 暂停覆盖层 ---------- */
+  #overlay-pause { z-index:55; background:rgba(5,8,18,.82); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); }
+  #overlay-pause.hidden { pointer-events:none; }
+  .pause-menu { display:flex; flex-direction:column; align-items:center; gap:4px; }
+  .pause-link { background:none; border:none; cursor:pointer; padding:12px 8px; color:rgba(255,255,255,.8);
+    font-family:inherit; font-size:clamp(18px,2.4vw,22px); font-weight:400; letter-spacing:0.15em;
+    transition:all .25s; text-align:center; min-height:var(--touch-min); }
+  .pause-link:hover { color:#fff; text-shadow:0 2px 12px rgba(255,255,255,.3); }
+  .pause-title { color:rgba(255,255,255,.4); font-size:13px; letter-spacing:0.5em; margin-bottom:20px; }
 
   /* ---------- 技能选择覆盖层 ---------- */
   #overlay-skill { z-index:60; background:radial-gradient(ellipse at center,rgba(12,16,36,.85),rgba(5,8,18,.95)); }
@@ -320,19 +347,12 @@
 
   /* ---------- 加载动画 ---------- */
   #loading { position:fixed; inset:0; z-index:100; display:flex; flex-direction:column; align-items:center; justify-content:center;
-    background:radial-gradient(ellipse at center,#0e1428,#050810); transition:opacity .8s ease; }
+    background:#050810; transition:opacity .6s ease; }
   #loading.hidden { opacity:0; pointer-events:none; }
-  .loader-orb { position:relative; width:80px; height:80px; margin-bottom:28px; }
-  .loader-orb::before, .loader-orb::after { content:""; position:absolute; inset:0; border-radius:50%; border:3px solid transparent; }
-  .loader-orb::before { border-top-color:#ffd76a; border-right-color:#ffd76a; animation:spin 1s linear infinite; }
-  .loader-orb::after { inset:12px; border-bottom-color:#8ad0ff; border-left-color:#8ad0ff; animation:spin 1.5s linear infinite reverse; }
-  .loader-orb .core { position:absolute; inset:28px; border-radius:50%; background:radial-gradient(circle,#ffe9b0,#ffd76a); box-shadow:0 0 24px rgba(255,215,106,.7); animation:pulse 1.2s ease-in-out infinite; }
-  @keyframes spin { to { transform:rotate(360deg); } }
-  @keyframes pulse { 0%,100%{ transform:scale(.85); opacity:.7; } 50%{ transform:scale(1.1); opacity:1; } }
-  .loader-text { color:rgba(255,255,255,.55); font-size:14px; letter-spacing:6px; font-weight:500; }
-  .loader-bar { width:180px; height:3px; margin-top:16px; border-radius:999px; background:rgba(255,255,255,.1); overflow:hidden; }
-  .loader-bar i { display:block; height:100%; width:40%; border-radius:999px; background:linear-gradient(90deg,#ffd76a,#8ad0ff); animation:loadSlide 1.4s ease-in-out infinite; }
-  @keyframes loadSlide { 0%{ transform:translateX(-100%); } 100%{ transform:translateX(350%); } }
+  .loader-title { color:#fff; font-size:clamp(28px,5vw,42px); letter-spacing:0.18em; font-weight:700; margin-bottom:24px; }
+  .loader-bar { width:200px; height:2px; border-radius:999px; background:rgba(255,255,255,.12); overflow:hidden; }
+  .loader-bar i { display:block; height:100%; width:30%; border-radius:999px; background:#fff; animation:loadSlide 1.2s ease-in-out infinite; }
+  @keyframes loadSlide { 0%{ transform:translateX(-100%); } 100%{ transform:translateX(400%); } }
 
   /* ---------- 移动端适配 ---------- */
   @media (min-width:641px) {
@@ -348,8 +368,8 @@
     .res { font-size:10px; padding:4px 6px; }
     .res span { min-width:16px; }
     .crisis-banner { top:50px; font-size:11px; padding:6px 12px; }
-    #skill-bar { top:78px; }
-    #task-panel { top:102px; width:min(420px,96vw); padding:10px 12px; }
+    #skill-bar { top:46px; }
+    #task-panel { top:46px; width:min(220px,72vw); padding:8px 10px; }
     #toasts { top:58px; right:6px; gap:5px; }
     .toast { font-size:11px; padding:8px 12px; }
     #bottombar { left:6px; right:6px; bottom:6px; gap:6px; }
@@ -399,8 +419,7 @@
 </head>
 <body>
 <div id="loading">
-  <div class="loader-orb"><div class="core"></div></div>
-  <div class="loader-text">正在唤醒文明…</div>
+  <div class="loader-title">DEUS ISLE</div>
   <div class="loader-bar"><i></i></div>
 </div>
 
@@ -422,9 +441,10 @@
     </div>
     <div id="topbar-right">
       <div id="clock" title="昼夜"><iconify-icon icon="mdi:weather-sunny"></iconify-icon></div>
+      <button class="icon-btn collapse-toggle" id="btn-collapse-res" title="折叠资源"><iconify-icon icon="mdi:chevron-up"></iconify-icon></button>
+      <button class="icon-btn" id="btn-pause" title="暂停"><iconify-icon icon="mdi:pause"></iconify-icon></button>
       <button class="icon-btn" id="btn-mute" title="音效开关"><iconify-icon icon="mdi:volume-high"></iconify-icon></button>
       <button class="icon-btn" id="btn-save" title="存档/读档"><iconify-icon icon="mdi:content-save-all"></iconify-icon></button>
-      <button class="icon-btn" id="btn-reset" title="重置存档"><iconify-icon icon="mdi:reload"></iconify-icon></button>
     </div>
   </div>
 
@@ -460,6 +480,7 @@
       <button class="act-btn" id="btn-eraup" disabled><iconify-icon icon="mdi:arrow-up-bold"></iconify-icon>时代跃迁</button>
     </div>
   </div>
+  <button id="bottombar-toggle"><iconify-icon icon="mdi:chevron-down"></iconify-icon></button>
 </div>
 
 <div class="lb top"></div><div class="lb bot"></div>
@@ -479,6 +500,15 @@
 <div class="overlay hidden" id="overlay-skill">
   <div class="skill-title"><iconify-icon icon="mdi:star-shooting"></iconify-icon>选择本纪元技能</div>
   <div id="skill-grid"></div>
+</div>
+
+<div class="overlay hidden" id="overlay-pause">
+  <div class="pause-menu">
+    <div class="pause-title">已暂停</div>
+    <button class="pause-link" data-pause="resume">继续游戏</button>
+    <button class="pause-link" data-pause="save">存档 / 读档</button>
+    <button class="pause-link" data-pause="quit">返回主菜单</button>
+  </div>
 </div>
 
 <div class="overlay hidden" id="overlay-victory">

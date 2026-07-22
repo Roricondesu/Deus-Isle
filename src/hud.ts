@@ -259,9 +259,16 @@ export function renderTaskPanel(): void {
   refreshTasks();
   const el = $('task-panel');
   if (!el) return;
+  const collapsed = el.classList.contains('collapsed');
   el.innerHTML =
-    '<div class="task-head">' + icon(IC.target) + ' 任务清单</div>' +
+    '<div class="task-head">' + icon(IC.target) + ' 任务' +
+    '<span class="task-toggle">' + icon(IC.chevronDown) + '</span></div>' +
     '<div class="task-list">' + renderTasksHTML() + '</div>';
+  // 保持折叠状态
+  if (collapsed) el.classList.add('collapsed');
+  // 点击标题切换折叠
+  const head = el.querySelector('.task-head');
+  if (head) head.addEventListener('click', () => el.classList.toggle('collapsed'));
 }
 
 export function renderSkillBar(): void {
