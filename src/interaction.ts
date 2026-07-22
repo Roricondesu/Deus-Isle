@@ -19,6 +19,7 @@ import { makeBuilding } from './buildings';
 import { burst } from './particles';
 import { sfx } from './audio';
 import { toast, refreshHUD, renderDock, floatText } from './hud';
+import { IC, icon } from './icon';
 import { confirmExpandAt, cancelExpandMode, isValidExpandPos } from './game';
 import { scheduleRebuildRoads } from './roads';
 import { assignJobs } from './citizens';
@@ -215,13 +216,13 @@ export function tryBuild(x: number, z: number): void {
   const def = CATALOG.find((d) => d.t === S.sel);
   if (!def) return;
   if (def.t === 'wonder' && S.wonders[S.era]) {
-    toast('本时代的奇观已建成', '🏛️');
+    toast('本时代的奇观已建成', IC.wonder);
     return;
   }
   const cost = costOf(def);
   if (!canAfford(cost)) {
     sfx.error();
-    toast('资源不足！需要 ' + costText(cost), '⚠️');
+    toast('资源不足！需要 ' + costText(cost), IC.warning);
     return;
   }
   pay(cost);
@@ -229,7 +230,7 @@ export function tryBuild(x: number, z: number): void {
   sfx.build();
   if (def.t === 'wonder') {
     S.wonders[S.era] = true;
-    toast('奇观落成！' + def.names[S.era] + ' 将永载史册', '🏛️');
+    toast('奇观落成！' + def.names[S.era] + ' 将永载史册', IC.wonder);
     burst(V3(x * CELL, 2, z * CELL), 0xffd76a, 60, 7, 1.6, -3, 6);
   }
   refreshHUD();

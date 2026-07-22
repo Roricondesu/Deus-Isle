@@ -30,6 +30,7 @@ import {
   autoUpgradeTick,
 } from './game';
 import { refreshHUD, renderDock, updateGodDock, toast, updateEraBadge, showSavePanel, hideSavePanel } from './hud';
+import { IC } from './icon';
 import {
   saveGame,
   loadGame,
@@ -190,10 +191,10 @@ function bindButtons(): void {
         refreshHUD();
         renderDock();
         updateEraBadge();
-        toast(t('loaded'), '✓');
+        toast(t('loaded'), IC.check);
       } else {
         sfx.error();
-        toast(t('loadFailed'), '⚠');
+        toast(t('loadFailed'), IC.warning);
       }
     } else if (act === 'delete-slot') {
       const slot = parseInt(target.dataset.slot || '0', 10);
@@ -352,8 +353,8 @@ function startGame(): void {
       },
       (t) => 1 - Math.pow(1 - t, 3),
     );
-  setTimeout(() => toast(t('tipBuild'), '👇'), 2800);
-  setTimeout(() => toast(t('tipGoal'), '🎯'), 6600);
+  setTimeout(() => toast(t('tipBuild'), IC.pointDown), 2800);
+  setTimeout(() => toast(t('tipGoal'), IC.target), 6600);
 }
 
 /* ================= 初始化 ================= */
@@ -375,7 +376,7 @@ function init(): void {
   } else {
     S.cells.forEach((b) => b.g.scale.setScalar(1));
     updateEraBadge();
-    setTimeout(() => toast('已读取存档，文明继续…', '📜'), 800);
+    setTimeout(() => toast('已读取存档，文明继续…', IC.scroll), 800);
   }
   // 取消初始建筑的生长动画，直接成型
   tweens.length = 0;

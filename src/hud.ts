@@ -42,7 +42,7 @@ export function floatText(pos: THREE.Vector3, txt: string, color: string = '#fff
   const s = toScreen(pos.clone().add(new THREE.Vector3(0, 1.8, 0)));
   const el = document.createElement('div');
   el.className = 'floater';
-  el.innerHTML = iconify(txt);
+  el.innerHTML = txt;
   el.style.color = color;
   el.style.left = s.x + 'px';
   el.style.top = s.y + 'px';
@@ -50,10 +50,10 @@ export function floatText(pos: THREE.Vector3, txt: string, color: string = '#fff
   setTimeout(() => el.remove(), 1450);
 }
 
-export function toast(txt: string, ico: string = '📢'): void {
+export function toast(txt: string, ico: string = IC.bullhorn): void {
   const el = document.createElement('div');
   el.className = 'toast';
-  el.innerHTML = iconify(ico + ' ' + txt);
+  el.innerHTML = icon(ico) + ' ' + iconify(txt);
   $('toasts').appendChild(el);
   setTimeout(() => {
     el.classList.add('out');
@@ -75,12 +75,12 @@ export function updateCrisisBanner(): void {
     meteor: '陨石',
   };
   const icons: Record<NonNullable<typeof S.crisis>['type'], string> = {
-    drought: '☀️',
-    tsunami: '🌊',
-    plague: '☠️',
-    meteor: '☄️',
+    drought: IC.drought,
+    tsunami: IC.tsunami,
+    plague: IC.plague,
+    meteor: IC.meteor,
   };
-  el.innerHTML = `${icons[S.crisis.type]} ${names[S.crisis.type]} 正在肆虐 · 剩余 ${Math.ceil(S.crisis.t)} 秒`;
+  el.innerHTML = icon(icons[S.crisis.type]) + ' ' + names[S.crisis.type] + ' 正在肆虐 · 剩余 ' + Math.ceil(S.crisis.t) + ' 秒';
   el.classList.remove('hidden');
 }
 
@@ -155,11 +155,11 @@ export function renderDock(): void {
     const built = def.t === 'wonder' && S.wonders[S.era];
     el.innerHTML =
       '<div class="b-icon">' +
-      iconify(def.icon) +
+      icon(def.icon) +
       '</div><div class="b-name">' +
       def.names[S.era] +
       '</div><div class="b-cost">' +
-      (built ? '已建成' : iconify(costText(costOf(def)))) +
+      (built ? '已建成' : costText(costOf(def))) +
       '</div>';
     el.title = def.tip + '（' + CATMAP[def.t] + '）';
     el.onclick = () => {
@@ -178,11 +178,12 @@ export function renderDock(): void {
     el.id = 'god-' + g.k;
     el.innerHTML =
       '<div class="cdmask" style="transform:scaleY(0)"></div><b>' +
-      iconify(g.icon) +
-      '</b>' +
+      icon(g.icon) +
+      '</b><span>' +
       g.name +
-      '<br>' + icon(IC.faith) +
-      g.cost;
+      '</span><span>' + icon(IC.faith) +
+      g.cost +
+      '</span>';
     el.title = g.tip;
     el.onclick = () => castGod(g.k);
     gd.appendChild(el);
@@ -210,7 +211,7 @@ export function showEraTransition(): void {
   anim.classList.remove('show');
   void anim.offsetWidth;
   anim.classList.add('show');
-  $('era-icon').innerHTML = iconify(ERAS[S.era].icon);
+  $('era-icon').innerHTML = icon(ERAS[S.era].icon);
   $('era-name').textContent = ERAS[S.era].name;
   $('era-sub').textContent = '第 ' + (S.era + 1) + ' 纪元';
 }
@@ -220,7 +221,7 @@ export function hideEraTransition(): void {
 }
 
 export function updateEraBadge(): void {
-  $('era-icon').innerHTML = iconify(ERAS[S.era].icon);
+  $('era-icon').innerHTML = icon(ERAS[S.era].icon);
   $('era-name').textContent = ERAS[S.era].name;
   $('era-sub').textContent = '第 ' + (S.era + 1) + ' 纪元';
 }

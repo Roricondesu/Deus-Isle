@@ -48,17 +48,6 @@ function randName(): string {
   return pick(FIRST_NAMES_EN) + ' ' + pick(LAST_NAMES_EN);
 }
 
-function jobIcon(j: JobType): string {
-  switch (j) {
-    case 'farmer': return '🌾';
-    case 'woodcutter': return '🪓';
-    case 'merchant': return '🏪';
-    case 'priest': return '⛩️';
-    case 'guard': return '🛡️';
-    default: return '';
-  }
-}
-
 /* ================= 当前所在岛判定 ================= */
 function currentIsland(x: number, z: number): { cx: number; cz: number; r: number } | null {
   const d = Math.hypot(x, z);

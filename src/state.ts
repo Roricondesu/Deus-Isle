@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { CELL, wonderCost, eraReq } from './constants';
 import { rand, smooth } from './utils';
+import { icon, IC } from './icon';
 
 /* ================= 游戏运行时状态 ================= */
 export interface CellEntry {
@@ -222,9 +223,9 @@ export function pay(cost: number[]): void {
 
 export function costText(c: number[]): string {
   const s: string[] = [];
-  if (c[0]) s.push('🪵' + c[0]);
-  if (c[1]) s.push('🪙' + c[1]);
-  if (c[2]) s.push('✨' + c[2]);
+  if (c[0]) s.push(icon(IC.wood) + c[0]);
+  if (c[1]) s.push(icon(IC.gold) + c[1]);
+  if (c[2]) s.push(icon(IC.faith) + c[2]);
   return s.join(' ');
 }
 

@@ -71,7 +71,7 @@ export const EVENTS: EventDef[] = [
     f() {
       const g = randi(25, 45);
       S.gold += g;
-      return ['远方商船来访，贸易 +' + g + ' 🪙', '🚢'];
+      return ['远方商船来访，贸易 +' + g + ' 金币', IC.ship];
     },
   },
   {
@@ -79,7 +79,7 @@ export const EVENTS: EventDef[] = [
     f() {
       const f = randi(8, 15);
       S.faith += f;
-      return ['流星雨之夜，信仰 +' + f + ' ✨', '🌠'];
+      return ['流星雨之夜，信仰 +' + f, IC.meteorShower];
     },
   },
   {
@@ -87,21 +87,21 @@ export const EVENTS: EventDef[] = [
     f() {
       const f = randi(18, 30);
       S.food += f;
-      return ['鱼群洄游，食物 +' + f + ' 🌾', '🐟'];
+      return ['鱼群洄游，食物 +' + f, IC.fish];
     },
   },
   {
     w: 2,
     f() {
       S.happy = Math.min(98, S.happy + 7);
-      return ['祥瑞之兆，幸福 +7', '🦅'];
+      return ['祥瑞之兆，幸福 +7', IC.eagle];
     },
   },
   {
     w: 1,
     f() {
       S.faith += 30;
-      return ['一位伟人诞生了！信仰 +30 ✨', '🌟'];
+      return ['一位伟人诞生了！信仰 +30', IC.star];
     },
   },
   {
@@ -110,7 +110,7 @@ export const EVENTS: EventDef[] = [
       if (S.era < 1) return null;
       const g = randi(20, 40);
       S.gold += g;
-      return ['遗迹游客络绎不绝，金币 +' + g + ' 🪙', '📸'];
+      return ['遗迹游客络绎不绝，金币 +' + g, IC.camera];
     },
   },
   // ---- 危机事件（不可叠加）----
@@ -119,7 +119,7 @@ export const EVENTS: EventDef[] = [
     f() {
       if (inCrisis() || S.plagueShield > 0) return null;
       S.crisis = { type: 'plague', t: 45, severity: 0.5 + Math.random() * 0.4 };
-      return ['瘟疫爆发！市民不断病倒，快用神迹治愈', '☠️'];
+      return ['瘟疫爆发！市民不断病倒，快用神迹治愈', IC.plague];
     },
   },
   {
@@ -127,7 +127,7 @@ export const EVENTS: EventDef[] = [
     f() {
       if (inCrisis()) return null;
       S.crisis = { type: 'drought', t: 50, severity: 0.5 + Math.random() * 0.4 };
-      return ['大旱来袭！农田干涸，河流断流', '☀️'];
+      return ['大旱来袭！农田干涸，河流断流', IC.drought];
     },
   },
   {
@@ -136,7 +136,7 @@ export const EVENTS: EventDef[] = [
       if (inCrisis()) return null;
       S.crisis = { type: 'tsunami', t: 30, severity: 0.6 + Math.random() * 0.3 };
       addShake(1.2);
-      return ['海啸警报！沿海建筑停产，快平息海浪', '🌊'];
+      return ['海啸警报！沿海建筑停产，快平息海浪', IC.tsunami];
     },
   },
   {
@@ -146,7 +146,7 @@ export const EVENTS: EventDef[] = [
       S.crisis = { type: 'meteor', t: 25, severity: 0.5 + Math.random() * 0.5 };
       addShake(0.8);
       castMeteor(true);
-      return ['陨石坠落！小心火灾蔓延', '☄️'];
+      return ['陨石坠落！小心火灾蔓延', IC.meteor];
     },
   },
 ];
@@ -222,7 +222,7 @@ export function econTick(): void {
     for (const c of dead) {
       if (removeCitizen(c.id)) {
         S.pop = Math.max(0, S.pop - 1);
-        toast(`${c.name} 没能挺过瘟疫`, '💀');
+        toast(`${c.name} 没能挺过瘟疫`, IC.skull);
       }
     }
   }
@@ -236,8 +236,8 @@ export function econTick(): void {
     });
     if (arr.length) {
       const b = pick(arr);
-      const icon = b.t === 'farm' ? '🌾' : b.t === 'wood' ? '🪵' : b.t === 'market' ? '🪙' : '✨';
-      floatText(b.g.position, icon, '#ffe9b0');
+      const ico = b.t === 'farm' ? IC.food : b.t === 'wood' ? IC.woodcutter : b.t === 'market' ? IC.gold : IC.faith;
+      floatText(b.g.position, icon(ico), '#ffe9b0');
     }
   }
 }
@@ -247,10 +247,10 @@ export function popTick(): void {
   if (S.pop < cap && S.food > 10 && S.happy > 45) {
     S.pop++;
     S.food = Math.max(0, S.food - 4);
-    if (Math.random() < 0.5) toast('新生命诞生！人口+1', '👶');
+    if (Math.random() < 0.5) toast('新生命诞生！人口+1', IC.baby);
   } else if (S.food <= 0 && S.pop > 2 && Math.random() < 0.4) {
     S.pop--;
-    toast('有市民因饥饿离开了', '💀');
+    toast('有市民因饥饿离开了', IC.skull);
   }
 }
 
@@ -266,19 +266,19 @@ let activePrayer: ActivePrayer | null = null;
 
 function applyPrayerEffect(p: (typeof PRAYERS)[number]): string {
   switch (p.txt) {
-    case '祈求食物 🌾':
+    case '祈求食物':
       S.food += 20;
-      return '+20 🌾';
-    case '想要更多住房 🛖':
+      return '+20 食物';
+    case '想要更多住房':
       S.wood += 15;
-      return '+15 🪵';
-    case '祈求平安 ✨':
+      return '+15 木材';
+    case '祈求平安':
       S.happy = Math.min(98, S.happy + 6);
       return '幸福+6';
-    case '盼望财富 🪙':
+    case '盼望财富':
       S.gold += 18;
-      return '+18 🪙';
-    case '希望风调雨顺 🌧️':
+      return '+18 金币';
+    case '希望风调雨顺':
       S.buffs.rain = Math.max(S.buffs.rain, 25);
       rainPts.visible = true;
       return '降下甘霖';
@@ -295,7 +295,7 @@ export function spawnPrayer(): void {
   const p = pick(PRAYERS);
   const el = document.createElement('div');
   el.className = 'prayer';
-  el.innerHTML = iconify(p.txt);
+  el.textContent = p.txt;
   document.getElementById('prayers')!.appendChild(el);
   activePrayer = { c, el, p, life: 9 };
   el.onclick = () => {
@@ -304,7 +304,7 @@ export function spawnPrayer(): void {
     S.faith += 6;
     sfx.faith();
     burst(c.g.position.clone().add(V3(0, 1.2, 0)), 0xffd76a, 26, 3, 1.1, -1, 4);
-    floatText(c.g.position, '+6 ✨ ' + got, '#ffe9b0');
+    floatText(c.g.position, '+6 信仰 ' + got, '#ffe9b0');
     endPrayer(false);
   };
 }
@@ -350,7 +350,7 @@ function bindGods(): void {
   GODS[0].f = () => {
     S.buffs.rain = 60;
     rainPts.visible = true;
-    toast('神迹·赐雨！农田产量翻倍', '🌧️');
+    toast('神迹·赐雨！农田产量翻倍', IC.rain);
     return true;
   };
   GODS[1].f = () => {
@@ -361,22 +361,22 @@ function bindGods(): void {
     S.food += 55;
     S.happy = Math.min(98, S.happy + 5);
     burst(V3(0, 2, 0), 0xffe98a, 80, 10, 1.8, 2, 7);
-    toast('神迹·丰收！食物 +55', '✨');
+    toast('神迹·丰收！食物 +55', IC.bless);
     return true;
   };
   GODS[3].f = () => {
     S.buffs.haste = 25;
-    toast('神迹·时光加速！', '⏳');
+    toast('神迹·时光加速！', IC.haste);
     return true;
   };
   GODS[4].f = () => {
     if (!S.crisis || (S.crisis.type !== 'drought' && S.crisis.type !== 'tsunami')) {
-      toast('当前没有海啸或干旱可平息', '⚠️');
+      toast('当前没有海啸或干旱可平息', IC.warning);
       return false;
     }
     S.crisis = null;
     hideTsunamiWave();
-    toast('神迹·平息！海啸与干旱已退去', '🌊');
+    toast('神迹·平息！海啸与干旱已退去', IC.calm);
     updateCrisisBanner();
     return true;
   };
@@ -386,7 +386,7 @@ function bindGods(): void {
     if (S.crisis?.type === 'plague') {
       S.crisis = null;
     }
-    toast('神迹·治愈！瘟疫退散，市民获得免疫', '🏥');
+    toast('神迹·治愈！瘟疫退散，市民获得免疫', IC.heal);
     updateCrisisBanner();
     return true;
   };
@@ -402,7 +402,7 @@ export function castGod(k: string): void {
   }
   if (S.faith < g.cost) {
     sfx.error();
-    toast('信仰不足！需要 ' + g.cost + ' ✨', '⚠️');
+    toast('信仰不足！需要 ' + g.cost, IC.warning);
     return;
   }
   S.faith -= g.cost;
@@ -459,7 +459,7 @@ export function updateCrisis(dt: number): void {
 
   if (S.crisis.t <= 0) {
     const names: Record<Crisis['type'], string> = { drought: '大旱', tsunami: '海啸', plague: '瘟疫', meteor: '陨石' };
-    toast(`${names[type]} 已经平息`, '✅');
+    toast(names[type] + ' 已经平息', IC.check);
     S.crisis = null;
     hideTsunamiWave();
     updateCrisisBanner();
@@ -493,14 +493,14 @@ function castMeteor(isCrisis: boolean = false): void {
       if (isCrisis) {
         // 危机陨石只造成视觉与停产，不摧毁任何建筑
         burst(V3(tx, 0.5, tz), 0xff5a3a, 16, 4, 1.2, 2, 5);
-        toast('陨石坠岛！建筑停产，地标无损', '☄️');
+        toast('陨石坠岛！建筑停产，地标无损', IC.meteor);
       } else {
         const gold = randi(30, 55);
         const wood = randi(15, 30);
         S.gold += gold;
         S.wood += wood;
-        floatText(V3(tx, 0, tz), '+' + gold + ' 🪙 +' + wood + ' 🪵', '#ffd76a');
-        toast('流星坠岛！砸出矿藏', '☄️');
+        floatText(V3(tx, 0, tz), '+' + gold + ' 金币 +' + wood + ' 木材', '#ffd76a');
+        toast('流星坠岛！砸出矿藏', IC.meteor);
       }
       refreshHUD();
     },
@@ -626,7 +626,7 @@ export function startLaunch(): void {
   S.transitioning = true;
   document.body.classList.add('cine');
   sfx.launch();
-  toast('方舟点火！全岛升空——', '🚀');
+  toast('方舟点火！全岛升空——', IC.eraRocket);
   PAL_T.night.set(0x020310);
   PAL_T.sky.set(0x05081c);
   PAL_T.fog.set(0x05081c);
@@ -668,7 +668,7 @@ export function enterExpandMode(): void {
   const c = EXPAND_COST[S.expand];
   if (!canAfford([c[0], c[1], 0])) {
     sfx.error();
-    toast('资源不足！需要 ' + costText([c[0], c[1], 0]), '⚠️');
+    toast('资源不足！需要 ' + costText([c[0], c[1], 0]), IC.warning);
     return;
   }
   S.expandMode = true;
@@ -706,13 +706,13 @@ export function confirmExpandAt(x: number, z: number): void {
   }
   if (!isValidExpandPos(x, z)) {
     sfx.error();
-    toast('位置不合适：需在水面上，距岛心 ' + PATCH_MIN_DIST + '–' + PATCH_MAX_DIST + ' 之间', '⚠️');
+    toast('位置不合适：需在水面上，距岛心 ' + PATCH_MIN_DIST + '–' + PATCH_MAX_DIST + ' 之间', IC.warning);
     return;
   }
   const c = EXPAND_COST[S.expand];
   if (!canAfford([c[0], c[1], 0])) {
     sfx.error();
-    toast('资源不足！需要 ' + costText([c[0], c[1], 0]), '⚠️');
+    toast('资源不足！需要 ' + costText([c[0], c[1], 0]), IC.warning);
     cancelExpandMode();
     return;
   }
@@ -725,7 +725,7 @@ export function confirmExpandAt(x: number, z: number): void {
   sfx.build();
   addShake(0.3);
   burst(V3(x, 1, z), 0x8ad0ff, 60, 14, 1.4, -2, 6);
-  toast('填海造陆！岛屿向该方向扩张', '🏝️');
+  toast('填海造陆！岛屿向该方向扩张', IC.island);
   refreshHUD();
   saveGame();
 }
