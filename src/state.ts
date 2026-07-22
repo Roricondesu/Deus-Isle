@@ -61,6 +61,7 @@ export interface ActiveTask {
   id: string;
   text: string;
   icon: string;
+  reward: string;
   done: boolean;
 }
 

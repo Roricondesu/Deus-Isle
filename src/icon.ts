@@ -68,6 +68,7 @@ export const IC = {
   scroll: 'mdi:scroll',
   chevronDown: 'mdi:chevron-down',
   pause: 'mdi:pause',
+  gift: 'mdi:gift',
 } as const;
 
 export type IconName = (typeof IC)[keyof typeof IC];
