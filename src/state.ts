@@ -51,6 +51,8 @@ export interface GameState {
   skillChoices: string[] | null;
   /* 任务清单 */
   tasks: TaskState;
+  /* 累计自动升级次数（驱动难度递增） */
+  upgrades: number;
 }
 
 export interface TaskState {
@@ -93,6 +95,7 @@ export const S: GameState = {
   skills: [],
   skillChoices: null,
   tasks: { list: [], lastRefresh: 0 },
+  upgrades: 0,
 };
 
 /* ================= 地形：种子 + 高度场 + 不规则岸线 + 填海地块 ================= */
@@ -241,6 +244,9 @@ export const popCap = (): number => {
 };
 
 export const eraMul = (): number => 1 + S.era * 0.25;
+
+/** 难度系数：每次自动升级 +6%，最高 +150% */
+export const difficulty = (): number => Math.min(2.5, 1 + S.upgrades * 0.06);
 
 export const countType = (t: string): number => {
   let n = 0;

@@ -41,7 +41,7 @@ import {
   deleteSlot,
   SAVE_SLOTS,
 } from './save';
-import { S } from './state';
+import { S, difficulty } from './state';
 import { setupAudioToggle, unlockAudio, sfx, muted as audioMuted, setMuted } from './audio';
 import { rebuildRoads } from './roads';
 import { loadLang, setLang, applyI18n, t, lang } from './i18n';
@@ -100,7 +100,8 @@ function loop(): void {
       popTick();
     }
     evtAcc += gdt;
-    if (evtAcc > 38) {
+    const evtInterval = 38 / difficulty();
+    if (evtAcc > evtInterval) {
       evtAcc = 0;
       fireEvent();
     }

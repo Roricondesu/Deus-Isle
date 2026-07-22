@@ -32,6 +32,7 @@ interface SaveData {
   citizens: SerializedCitizen[];
   skills: string[];
   tasks: TaskState;
+  upgrades?: number;
   // 手动存档额外字段
   savedAt?: number;     // 保存时间戳
   note?: string;        // 备注（自动生成）
@@ -78,6 +79,7 @@ function collectSave(): SaveData {
     citizens: citizenData,
     skills: S.skills,
     tasks: { list: S.tasks.list.map((t) => ({ ...t })), lastRefresh: S.tasks.lastRefresh },
+    upgrades: S.upgrades,
     savedAt: Date.now(),
   };
 }
@@ -104,6 +106,7 @@ function applySave(d: SaveData): void {
   S.tasks = d.tasks && Array.isArray(d.tasks.list)
     ? { list: d.tasks.list.map((t) => ({ ...t })), lastRefresh: d.tasks.lastRefresh || 0 }
     : { list: [], lastRefresh: 0 };
+  S.upgrades = typeof d.upgrades === 'number' ? d.upgrades : 0;
   // 还原地形种子和填海地块
   if (typeof d.seed === 'number') setSeed(d.seed);
   if (Array.isArray(d.patches)) setPatches(d.patches.map((p) => ({ ...p })));

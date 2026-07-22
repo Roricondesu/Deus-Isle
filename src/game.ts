@@ -23,6 +23,7 @@ import {
   rainDurAdd,
   costMul,
   citizenSpeedMul,
+  difficulty,
   type CellEntry,
   type Crisis,
 } from './state';
@@ -135,7 +136,8 @@ export const EVENTS: EventDef[] = [
     w: 2,
     f() {
       if (inCrisis() || S.plagueShield > 0) return null;
-      S.crisis = { type: 'plague', t: 45 * crisisDurMul(), severity: 0.5 + Math.random() * 0.4 };
+      const d = difficulty();
+      S.crisis = { type: 'plague', t: 45 * crisisDurMul(), severity: Math.min(0.95, (0.5 + Math.random() * 0.4) * d) };
       return ['瘟疫爆发！市民不断病倒，快用神迹治愈', IC.plague];
     },
   },
@@ -143,7 +145,8 @@ export const EVENTS: EventDef[] = [
     w: 2,
     f() {
       if (inCrisis()) return null;
-      S.crisis = { type: 'drought', t: 50 * crisisDurMul(), severity: 0.5 + Math.random() * 0.4 };
+      const d = difficulty();
+      S.crisis = { type: 'drought', t: 50 * crisisDurMul(), severity: Math.min(0.95, (0.5 + Math.random() * 0.4) * d) };
       return ['大旱来袭！农田干涸，河流断流', IC.drought];
     },
   },
@@ -151,7 +154,8 @@ export const EVENTS: EventDef[] = [
     w: 1,
     f() {
       if (inCrisis()) return null;
-      S.crisis = { type: 'tsunami', t: 30 * crisisDurMul(), severity: 0.6 + Math.random() * 0.3 };
+      const d = difficulty();
+      S.crisis = { type: 'tsunami', t: 30 * crisisDurMul(), severity: Math.min(0.95, (0.6 + Math.random() * 0.3) * d) };
       addShake(1.2);
       return ['海啸警报！沿海建筑停产，快平息海浪', IC.tsunami];
     },
@@ -160,7 +164,8 @@ export const EVENTS: EventDef[] = [
     w: 1,
     f() {
       if (inCrisis()) return null;
-      S.crisis = { type: 'meteor', t: 25 * crisisDurMul(), severity: 0.5 + Math.random() * 0.5 };
+      const d = difficulty();
+      S.crisis = { type: 'meteor', t: 25 * crisisDurMul(), severity: Math.min(0.95, (0.5 + Math.random() * 0.5) * d) };
       addShake(0.8);
       castMeteor(true);
       return ['陨石坠落！小心火灾蔓延', IC.meteor];
@@ -618,15 +623,16 @@ function morphBuildings(): void {
 
 /* ================= 居民自动升级建筑 ================= */
 let upgradeAcc = 0;
-const UPGRADE_INTERVAL = 6; // 每 6 秒尝试一次自动升级
+let nextUpgradeAt = rand(60, 120); // 下次升级时机（秒），1-2 分钟随机
 const UPGRADE_RATIO = 0.5;  // 升级消耗 = 该建筑原始 cost 的 50%
 const MAX_LEVEL = 5;        // 建筑最高等级（满级 +100% 收益）
 
 export function autoUpgradeTick(dt: number): void {
   if (S.transitioning || S.over) return;
   upgradeAcc += dt;
-  if (upgradeAcc < UPGRADE_INTERVAL) return;
+  if (upgradeAcc < nextUpgradeAt) return;
   upgradeAcc = 0;
+  nextUpgradeAt = rand(60, 120); // 重置下次随机间隔
 
   // 1. 优先：时代落后的建筑升级到当前时代外观（需 era>=1）
   if (S.era >= 1) {
@@ -674,6 +680,7 @@ export function autoUpgradeTick(dt: number): void {
   if (!canAfford(cost)) return;
   pay(cost);
   b.level++;
+  S.upgrades++; // 累计升级次数，驱动难度递增
   // 升级特效：粒子 + 短暂放大脉冲
   burst(b.g.position.clone().add(V3(0, 1, 0)), 0xffe98a, 16, 3, 0.9, -2, 4);
   const baseScale = b.g.scale.x;
